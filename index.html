@@ -1,18 +1,44 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>THE FIRST SPARK — Character Studio 0.4.1</title><style>
-*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:system-ui,-apple-system,sans-serif;color:#f3f4ff;background:#101627}#stage{position:fixed;inset:0}canvas{display:block}header{position:absolute;top:0;left:0;right:0;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;background:linear-gradient(#101627e8,transparent);pointer-events:none}h1{font-size:18px;margin:0;letter-spacing:.06em}header p{font-size:12px;color:#b9c6e4;margin:4px 0}.panel{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:12px;right:12px;background:#121c32dc;border:1px solid #657da855;border-radius:18px;padding:13px;backdrop-filter:blur(15px)}.row{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}button{background:#273a61;color:white;border:1px solid #657da855;padding:10px 12px;border-radius:12px;font-weight:650;cursor:pointer}button.active{background:#476fbe;border-color:#a9c7ff}#status{font-size:12px;text-align:center;color:#a9bad9;margin:0 0 10px}.small{font-size:11px;text-align:center;color:#98aaca;margin-top:10px}#error{display:none;background:#4b2434;padding:12px;border-radius:10px;margin-bottom:10px;font-size:12px}</style></head><body><div id="stage"></div><header><h1>THE FIRST SPARK</h1><p>CHARACTER STUDIO · ALPHA 0.4.1 · Modello 3D</p></header><section class="panel"><div id="error"></div><p id="status">Caricamento modello 3D…</p><div class="row"><button data-anim="idle" class="active">Riposo</button><button data-anim="walk">Camminata</button><button data-anim="run">Corsa</button><button data-anim="attack">Arco</button><button data-anim="hit">Danno</button></div><div class="small">Trascina per ruotare · Pizzica per ingrandire · Animazioni preliminari, non ancora rigging scheletrico</div></section><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/"}}</script><script type="module">
-import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-const stage=document.querySelector('#stage'), status=document.querySelector('#status'), err=document.querySelector('#error');
-const scene=new THREE.Scene();scene.background=new THREE.Color('#a5c6d5');scene.fog=new THREE.Fog('#a5c6d5',13,25);
-const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,100);camera.position.set(5.4,3.8,7.3);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;stage.appendChild(renderer.domElement);
-scene.add(new THREE.HemisphereLight('#fff4df','#698a9e',2.0));const sun=new THREE.DirectionalLight('#fff2d5',3);sun.position.set(-3,8,5);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-5;sun.shadow.camera.right=5;sun.shadow.camera.top=6;sun.shadow.camera.bottom=-5;sun.shadow.bias=-.0005;scene.add(sun);
-const ground=new THREE.Mesh(new THREE.CylinderGeometry(2.7,2.9,.26,80),new THREE.MeshStandardMaterial({color:'#83ac7a',roughness:.95}));ground.position.y=-.18;ground.receiveShadow=true;scene.add(ground);
-const ring=new THREE.Mesh(new THREE.TorusGeometry(2.63,.04,10,90),new THREE.MeshStandardMaterial({color:'#d8c78c',metalness:.3,roughness:.55}));ring.rotation.x=Math.PI/2;ring.position.y=-.04;scene.add(ring);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,1.65,0);controls.enableDamping=true;controls.enablePan=false;controls.minDistance=3.6;controls.maxDistance=13;controls.maxPolarAngle=Math.PI/2.02;controls.update();
-let hero=null,mode='idle',t=0,nodes=[],baseline=[];const clock=new THREE.Clock();
-new GLTFLoader().load('./mago_the_first_spark.glb',g=>{hero=g.scene;hero.rotation.y=0;hero.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;nodes.push(o);baseline.push({p:o.position.clone(),r:o.rotation.clone()})}});scene.add(hero);status.textContent='Modello caricato · 3D ruotabile';},undefined,e=>{err.style.display='block';err.textContent='Impossibile caricare il GLB. Pubblica tutti i file insieme su GitHub Pages o apri con un server locale. '+e.message;status.textContent='Caricamento non riuscito';});
-document.querySelectorAll('[data-anim]').forEach(b=>b.onclick=()=>{mode=b.dataset.anim;t=0;document.querySelectorAll('[data-anim]').forEach(x=>x.classList.toggle('active',x===b));status.textContent=({idle:'Riposo',walk:'Camminata',run:'Corsa',attack:'Tiro con arco',hit:'Reazione al danno'})[mode]+' · anteprima procedurale';});
-function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.05);t+=dt;controls.update();if(hero){hero.position.set(0,0,0);hero.rotation.set(0,0,0);hero.scale.setScalar(1);nodes.forEach((o,i)=>{o.position.copy(baseline[i].p);o.rotation.copy(baseline[i].r)});let wave=Math.sin(t*9),w=mode==='run'?1.7:1;if(mode==='idle'){hero.position.y=Math.sin(t*2.5)*.025;hero.rotation.y=Math.sin(t*.8)*.035;}if(mode==='walk'||mode==='run'){hero.position.y=Math.abs(Math.sin(t*7*w))*.06;hero.rotation.z=Math.sin(t*7*w)*.028;nodes.forEach(o=>{if(o.name.includes('boot_')||o.name.includes('trouser_')){const sign=o.name.endsWith('_L')?1:-1;o.position.z+=sign*Math.sin(t*7*w)*.13*w;}if(o.name.includes('sleeve_')||o.name.includes('hand_')){const sign=o.name.endsWith('_L')?-1:1;o.position.z+=sign*Math.sin(t*7*w)*.085;}})}if(mode==='attack'){let a=t%1.4;hero.rotation.y=Math.sin(Math.min(a/.3,1)*Math.PI/2)*-.13;nodes.forEach(o=>{if(o.name.startsWith('arrow_')||o.name==='arrow_shaft'||o.name==='arrowhead'){o.position.z-=a>.7?(a-.7)*4:Math.sin(a/.7*Math.PI)*.22;}if(o.name.includes('hand_'))o.position.z-=Math.sin(Math.min(a/.65,1)*Math.PI)*.14;});}if(mode==='hit'){hero.position.x=Math.sin(t*12)*.045*Math.exp(-t%1.5);hero.rotation.z=Math.sin(t*12)*.08*Math.exp(-(t%1.5)*3);}}renderer.render(scene,camera)}animate();addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-</script></body></html>
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#193c42">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./style.css?v=0331">
+<title>THE FIRST SPARK — Alpha 0.3 | Foresta Incantata</title>
+</head>
+<body>
+<div id="game" role="application" aria-label="Demo 3D di THE FIRST SPARK"></div>
+<div id="vignette"></div>
+<div id="loading"><div class="load-mark">✦</div><h2>THE FIRST SPARK</h2><p>La foresta prende vita…</p><small id="load-note">Caricamento del mondo tridimensionale</small></div>
+<div id="hud">
+  <header id="top">
+    <div class="title-hud"><div class="game-name">THE FIRST SPARK</div><div class="version">ALPHA 0.3 · STILE 3D RIFINITO</div><div class="health"><div id="hpbar"></div></div><span id="hptext">100 / 100 HP</span></div>
+    <div class="right-hud"><div id="coins">✦ 0 monete</div><div id="kills">Slime 0 / 5</div><button id="pause" class="pause" aria-label="Pausa">Ⅱ</button></div>
+  </header>
+  <div id="quest"><span class="quest-icon">✧</span> Foresta Incantata <span class="dot">·</span> Sconfiggi cinque slime</div>
+  <div id="toast" aria-live="polite"></div>
+  <div id="joy" aria-label="Joystick di movimento"><div id="joy-center"></div></div>
+  <div id="action-wrap"><div class="action-label">ARCO DEL NONNO</div><button id="fire" aria-label="Scocca una freccia">➶</button></div>
+  <div id="desktop-tip">WASD / FRECCE PER MUOVERTI · SPAZIO PER SCAGLIARE</div>
+</div>
+<div id="dialog" class="visible" role="dialog" aria-modal="true">
+  <div class="dialog-card">
+    <div class="dialog-top">✦ UNA NUOVA AVVENTURA ✦</div>
+    <div class="portrait"><img src="./icons/personaggio-originale.jpg" alt="Illustrazione originale del giovane mago con cappello blu e arco"></div>
+    <h1>THE FIRST SPARK</h1>
+    <div class="dialog-version">ALPHA 0.3 · FORESTA INCANTATA</div>
+    <p id="dialog-text">Una prima prova del nostro <b>vero 3D stilizzato</b>: personaggio chibi, cappello curvo, sentieri continui, alberi dalle forme morbide e piccoli dettagli magici.</p>
+    <p class="instructions">Esplora la foresta, usa l'arco del nonno e sconfiggi <b>5 slime</b> per far risplendere il cristallo.</p>
+    <button id="start">ENTRA NELLA FORESTA <span>➜</span></button>
+    <div class="dialog-footer">iPhone: joystick + pulsante arco<br>Computer: WASD / frecce + spazio</div>
+  </div>
+</div>
+<script type="module" src="./game.js?v=0331"></script>
+</body>
+</html>
