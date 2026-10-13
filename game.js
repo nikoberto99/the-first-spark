@@ -250,6 +250,7 @@ function init(){
     return {root,motion,arms,legs,bow};
   }
   const hero=heroModel();hero.root.position.set(-6,0,.55);
+  let enemyLoader=null;
   // Importazione del modello completo di materiali e texture, senza rigging.
   (async()=>{
     try{
@@ -257,6 +258,8 @@ function init(){
       try {loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
       catch(_){loaderModule=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
       const loader=new loaderModule.GLTFLoader();
+      enemyLoader=loader;
+      loadEnemyModels();
       loader.load('./mago-colorato.glb',gltf=>{
         const model=gltf.scene;
         const bounds=new THREE.Box3().setFromObject(model);
@@ -294,9 +297,50 @@ function init(){
     life.visible=false;
     g.userData={hp:3,maxHp:3,speed:.62+rand(seed)*.27,phase:rand(seed+9)*6,attack:0,flash:0,body,fill,life,seed};return g;
   }
+  // Nemici Meshy: manteniamo il corpo provvisorio come fallback fino al caricamento GLB.
+  const enemyAssets={};
+  function loadEnemyModels(){
+    if(!enemyLoader)return;
+    for(const [type,path] of Object.entries({slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb'})){
+      enemyLoader.load(path,gltf=>{
+        const scene=gltf.scene;
+        const box=new THREE.Box3().setFromObject(scene);
+        const size=box.getSize(new V());
+        if(!size.y||!Number.isFinite(size.y))return;
+        const scale=(type==='goblin'?1.85:1.22)/size.y;
+        scene.scale.setScalar(scale);
+        scene.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
+        enemyAssets[type]=scene;
+        for(const e of enemies)if(e.userData.kind===type)applyEnemyAsset(e);
+      },undefined,error=>console.warn('Modello '+type+' non caricato:',error));
+    }
+  }
+  function applyEnemyAsset(e){
+    const data=e.userData,source=enemyAssets[data.kind];
+    if(!source||data.meshyLoaded)return;
+    data.body.clear();
+    const visual=source.clone(true);
+    visual.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    data.body.add(visual);data.meshyLoaded=true;
+  }
+  function goblin(x,z,seed){
+    const e=slime(x,z,seed);
+    e.userData.kind='goblin';e.userData.hp=5;e.userData.maxHp=5;
+    e.userData.speed=.85+rand(seed)*.2;
+    e.userData.life.position.y=2.05;
+    e.userData.fill.material=e.userData.fill.material.clone();
+    e.userData.fill.material.color.set('#f59c68');
+    applyEnemyAsset(e);
+    return e;
+  }
+  function spawnEnemy(x,z,i){
+    const e=i<3?slime(x,z,i):goblin(x,z,i);
+    if(i<3){e.userData.kind='slime';applyEnemyAsset(e);}
+    return e;
+  }
   const enemies=[];
   const origins=[[-.6,2.5],[2.8,-2.5],[5.0,3.8],[11.7,-2.1],[14.2,3.3]];
-  origins.forEach((p,i)=>enemies.push(slime(p[0],p[1],i)));
+  origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
   let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0,winTimer=-1;
   const arrows=[],sparks=[];
   const move={x:0,y:0};const keys=new Set();let joyPointer=null;
@@ -304,7 +348,7 @@ function init(){
   function toast(t,sec=2){$('#toast').textContent=t;toastTime=sec}
   function updateHud(){
     $('#hpbar').style.width=health+'%';$('#hptext').textContent=health+' / 100 HP';
-    $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent='Slime '+kills+' / 5';
+    $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent='Nemici '+kills+' / 5';
   }
   function showDialog(title,detail,button='CONTINUA'){
     $('#dialog').classList.add('visible');$('#dialog-text').innerHTML=detail;
@@ -316,7 +360,7 @@ function init(){
   }
   function reset(){
     for(const e of enemies)world.remove(e);enemies.length=0;
-    origins.forEach((p,i)=>enemies.push(slime(p[0],p[1],i)));
+    origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
     for(const a of arrows)world.remove(a.mesh);arrows.length=0;
     for(const a of sparks)world.remove(a.mesh);sparks.length=0;
     hero.root.position.set(-6,0,.55);health=100;coins=0;kills=0;centerCrystal.visible=false;winTimer=-1;cooldown=0;updateHud();
@@ -439,8 +483,8 @@ function init(){
         if(d<8.5&&d>1.03){e.position.x+=dx/d*data.speed*dt;e.position.z+=dz/d*data.speed*dt}
         if(d<1.03){data.attack-=dt;if(data.attack<=0){takeDamage(9);data.attack=1.28}}
         const b=data.body;
-        b.scale.y=1+.055*Math.sin(elapsed*6+data.phase);
-        b.scale.x=1-.036*Math.sin(elapsed*6+data.phase);
+        b.scale.y=1+(data.kind==='goblin'?.012:.055)*Math.sin(elapsed*6+data.phase);
+        b.scale.x=1-(data.kind==='goblin'?.008:.036)*Math.sin(elapsed*6+data.phase);
         b.position.y=Math.max(0,Math.sin(elapsed*3+data.phase)*.035);
         b.rotation.y=Math.atan2(dx,dz);
         if(data.flash>0){data.flash-=dt;b.scale.multiplyScalar(1.006)}
@@ -463,7 +507,7 @@ function init(){
         }
         if(hitOne||a.life<0){world.remove(a.mesh);arrows.splice(i,1)}
       }
-      if(winTimer>=0){winTimer-=dt;if(winTimer<0){state='won';showDialog('CRISTALLO RISVEGLIATO!','Hai sconfitto i cinque slime e ottenuto <b>'+coins+' monete</b>.<br>Questa è una prova di stile 3D chibi: il viaggio nelle dieci isole continua nelle prossime versioni.','GIOCA DI NUOVO')}}
+      if(winTimer>=0){winTimer-=dt;if(winTimer<0){state='won';showDialog('CRISTALLO RISVEGLIATO!','Hai sconfitto tutti gli slime e i goblin e ottenuto <b>'+coins+' monete</b>.<br>Questa è una prova di stile 3D chibi: il viaggio nelle dieci isole continua nelle prossime versioni.','GIOCA DI NUOVO')}}
       if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('#toast').textContent=''}
     }else{
       hero.motion.position.y=Math.sin(elapsed*2.0)*.026;

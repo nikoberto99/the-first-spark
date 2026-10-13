@@ -1,6 +1,6 @@
 // Cache rigenerata per il nuovo stile 3D. I file sorgente vengono cercati prima online.
-const CACHE='first-spark-alpha04-meshy-0340';
-const STATIC=['./','./index.html','./style.css?v=0331','./game.js?v=0340','./mago-colorato.glb','./manifest.webmanifest','./icons/cover.jpg','./icons/personaggio-originale.jpg','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
+const CACHE='first-spark-alpha05-enemies-0500';
+const STATIC=['./','./index.html','./style.css?v=0331','./game.js?v=0500','./mago-colorato.glb','./slime-verde.glb','./goblin-ottimizzato.glb','./manifest.webmanifest','./icons/cover.jpg','./icons/personaggio-originale.jpg','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(STATIC)).then(()=>self.skipWaiting()));
 });
