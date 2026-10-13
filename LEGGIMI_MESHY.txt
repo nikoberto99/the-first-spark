@@ -1,0 +1,7 @@
+THE FIRST SPARK ALPHA 0.4 - PROTAGONISTA MESHY
+
+Il file mago-colorato.glb sostituisce il modello procedurale del protagonista.
+Avvia tramite server HTTP (GitHub Pages oppure python -m http.server), non con file://.
+Il personaggio si muove ma non ha animazioni scheletriche: occorre rigging.
+La prima apertura richiede connessione per Three.js e GLTFLoader.
+Il modello originale e gli altri elementi del gioco restano invariati.

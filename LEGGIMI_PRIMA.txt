@@ -1,0 +1,39 @@
+THE FIRST SPARK — ALPHA 0.3 · STILE 3D RIFINITO
+================================================
+
+OBIETTIVO DI QUESTA PROVA
+Più 3D stilizzato e chibi, meno forme piramidali e dischi visibili.
+È una demo giocabile, non la versione finale né un modello Blender definitivo.
+
+COSA È NUOVO
+- Mago 3D procedurale più fedele all'originale: viso, occhi grandi azzurri,
+  capelli, cappello largo con punta curvata, stella, veste con bordi, cintura,
+  stivali e arco del nonno.
+- Terreno erboso con texture procedurale e UN sentiero continuo curvo.
+- Alberi con chiome morbide tonde, piccoli funghi, fiori, rocce levigate,
+  laghetto e altare del cristallo.
+- Slime morbidi con volti, animazione, barra vita e particelle del colpo.
+- Luci 3D, nebbia leggera, ombre morbide e camera isometrica.
+- Giocabile con joystick + freccia su iPhone, WASD + spazio su PC.
+- Obiettivo: sconfiggere 5 slime e risvegliare il cristallo.
+
+COME AGGIORNARE GITHUB PAGES
+1. Estrai lo ZIP sul tuo computer.
+2. Apri la cartella THE_FIRST_SPARK_ALPHA_0_3_RIFINITA.
+3. Nel repository github.com/nikoberto99/the-first-spark apri branch main.
+4. Carica il CONTENUTO della cartella, direttamente nella root del repo.
+   Devono comparire qui: index.html, game.js, style.css, sw.js,
+   manifest.webmanifest, e la cartella icons.
+5. Sostituisci i vecchi file. Premi "Commit changes".
+6. Dopo l'aggiornamento apri:
+   https://nikoberto99.github.io/the-first-spark/?v=0.3.1
+7. Vedrai "ALPHA 0.3 · STILE 3D RIFINITO" in alto.
+
+NOTA IMPORTANTE
+È vero WebGL 3D, con mesh lisce disegnate via Three.js, NON una falsa
+proiezione 2D. Le mesh sono create proceduralmente, non sono ancora modelli
+artistici dettagliati da Blender. La prima apertura richiede Internet per
+scaricare Three.js dal CDN. I file del gioco sono tutti inclusi nello ZIP.
+
+Questa demo si concentra sullo stile della PRIMA ISOLA, non include le 10 isole,
+i cristalli elementali, il negozio di frecce e la progressione definitiva.

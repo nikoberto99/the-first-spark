@@ -235,71 +235,43 @@ function init(){
     const star=mesh(new THREE.ExtrudeGeometry(starShape(.19,.09),{depth:.032,bevelEnabled:true,bevelThickness:.012,bevelSize:.01,bevelSegments:2}),m.cream,parent,[-.12,2.51,.19],[1,1,1],false);
     star.rotation.y=-.13;
   }
+  // Protagonista Meshy: corpo statico GLB, animazioni scheletriche in una fase successiva.
   function heroModel(){
     const root=new THREE.Group();world.add(root);
     const motion=new THREE.Group();root.add(motion);
-    circularShadow(motion,0,0,.68,.24);
-    // Piedi e stivali con punte tonde.
-    const legs=[];
-    for(const side of [-1,1]){
-      const leg=new THREE.Group();leg.position.x=.19*side;motion.add(leg);legs.push(leg);
-      ball(leg,m.blueShade,[0,.32,0],[.18,.27,.2]);
-      ball(leg,m.boot,[0,.135,.09],[.2,.15,.3]);
-      ball(leg,m.bootSole,[0,.065,.14],[.21,.07,.3]);
-    }
-    // Mantello a forma di goccia e tunica sagomata con cintura.
-    ball(motion,m.navy,[0,.74,-.21],[.53,.74,.36]);
-    const profile=[new THREE.Vector2(0,.24),new THREE.Vector2(.29,.25),new THREE.Vector2(.49,.31),new THREE.Vector2(.51,.43),new THREE.Vector2(.43,.75),new THREE.Vector2(.38,1.03),new THREE.Vector2(.30,1.30),new THREE.Vector2(0,1.34)];
-    const robe=mesh(new THREE.LatheGeometry(profile,42),m.blue,motion);
-    robe.receiveShadow=true;
-    ball(motion,m.blueShade,[0,.62,.31],[.36,.57,.13]);
-    // Bordi decorativi dorati sul davanti della tunica.
-    curveTube(motion,m.gold,[[-.35,.28,.20],[-.30,.38,.34],[-.22,.61,.39],[-.19,.84,.37]],.018,16);
-    curveTube(motion,m.gold,[[.35,.28,.20],[.30,.38,.34],[.22,.61,.39],[.19,.84,.37]],.018,16);
-    mesh(new THREE.CylinderGeometry(.393,.41,.145,44),m.belt,motion,[0,.82,0]);
-    const buckle=mesh(new THREE.TorusGeometry(.113,.032,8,22),m.gold,motion,[0,.82,.39],[1.2,.78,1]);
-    const center=ball(motion,m.belt,[0,.82,.405],[.065,.058,.025],true);
-    // Testa grande, capelli e volto chibi leggibile da lontano.
-    ball(motion,m.hair,[0,1.592,-.055],[.48,.48,.44]);
-    ball(motion,m.skin,[0,1.545,.045],[.442,.421,.395]);
-    for(const side of [-1,1]){
-      ball(motion,m.skinShadow,[side*.428,1.51,.044],[.105,.155,.11]);
-      ball(motion,m.skin,[side*.445,1.53,.082],[.083,.111,.072]);
-      ball(motion,m.blush,[side*.285,1.44,.370],[.10,.042,.013],true,false);
-      // Occhio bianco, iride azzurra e pupilla con luce.
-      ball(motion,m.white,[side*.183,1.58,.397],[.131,.169,.061]);
-      ball(motion,m.iris,[side*.183,1.568,.458],[.085,.123,.025]);
-      ball(motion,m.irisDark,[side*.183,1.564,.475],[.044,.080,.014]);
-      ball(motion,m.white,[side*.205-.022,1.616,.49],[.028,.038,.01],true,false);
-      // Sopracciglio scuro inclinato.
-      const brow=ball(motion,m.hair,[side*.18,1.784,.414],[.125,.029,.036],true,false);
-      brow.rotation.z=side*.12;
-    }
-    ball(motion,m.skin,[0,1.46,.452],[.052,.043,.038],true,false);
-    curveTube(motion,m.hair,[[-.06,1.372,.419],[0,1.364,.43],[.06,1.372,.419]],.015,8);
-    // Ciocche morbide sopra la fronte e ai lati.
-    for(let i=-2;i<=2;i++){
-      const b=ball(motion,i%2?m.hairLight:m.hair,[i*.148,1.858,-.02+Math.cos(i)*.18],[.147,.16,.23]);
-      b.rotation.z=i*.13;
-    }
-    for(const side of [-1,1])ball(motion,m.hair,[side*.403,1.61,.0],[.125,.29,.27]);
-    curvedHat(motion);
-    // Maniche mobili con polsi e mani, accompagnano lo scocco.
-    const arms=[];
-    for(const side of [-1,1]){
-      const arm=new THREE.Group();arm.position.set(side*.35,1.18,.03);motion.add(arm);
-      const sleeve=ball(arm,m.blue,[side*.16,-.12,.03],[.24,.36,.26]);sleeve.rotation.z=side*.30;
-      ball(arm,m.gold,[side*.25,-.35,.06],[.19,.035,.18],true,false);
-      ball(arm,m.skin,[side*.25,-.425,.10],[.15,.15,.15]);arms.push(arm);
-    }
-    const bow=new THREE.Group();bow.position.set(.64,.90,.38);motion.add(bow);
-    curveTube(bow,m.bow,[[0,-.65,0],[.23,-.48,-.02],[.37,-.22,-.04],[.39,0,-.04],[.37,.22,-.04],[.23,.48,-.02],[0,.65,0]],.05,34);
-    curveTube(bow,m.bowLight,[[.02,-.64,.015],[.23,-.47,-.005],[.39,-.2,-.015],[.4,0,-.02],[.39,.2,-.015],[.23,.47,-.005],[.02,.64,.015]],.014,28);
-    stick(bow,m.string,[0,-.65,.006],[0,.65,.006],.011,.011,7);
-    for(const y of [-.39,.39])ball(bow,m.gold,[.29,y,0],[.07,.085,.075],true,false);
+    circularShadow(root,0,0,.68,.24);
+    const arms=[new THREE.Group(),new THREE.Group()];
+    const legs=[new THREE.Group(),new THREE.Group()];
+    const bow=new THREE.Group();motion.add(bow);
+    // L'arco resta un accessorio indipendente, visibile anche senza rigging.
+    bow.position.set(.52,1.02,.25);
+    curveTube(bow,m.bow,[[0,-.43,0],[.18,-.26,0],[.24,0,0],[.18,.26,0],[0,.43,0]],.035,24);
+    stick(bow,m.string,[0,-.43,0],[0,.43,0],.008,.008,5);
     return {root,motion,arms,legs,bow};
   }
   const hero=heroModel();hero.root.position.set(-6,0,.55);
+  // Importazione del modello completo di materiali e texture, senza rigging.
+  (async()=>{
+    try{
+      let loaderModule;
+      try {loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
+      catch(_){loaderModule=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
+      const loader=new loaderModule.GLTFLoader();
+      loader.load('./mago-colorato.glb',gltf=>{
+        const model=gltf.scene;
+        const bounds=new THREE.Box3().setFromObject(model);
+        const size=bounds.getSize(new V());
+        const center=bounds.getCenter(new V());
+        if(!size.y || !Number.isFinite(size.y))throw Error('Dimensioni GLB non valide');
+        const scale=2.72/size.y;
+        model.scale.setScalar(scale);
+        model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+        hero.motion.add(model);
+        console.info('Protagonista Meshy caricato correttamente');
+      },undefined,error=>{console.error('Caricamento del mago fallito:',error);toast('Impossibile caricare il modello 3D',4);});
+    }catch(error){console.error('GLTFLoader non disponibile:',error);toast('Errore caricamento protagonista',4);}
+  })();
   const facing=new V(0,0,1);
   // Slime morbidi e animati, non piramidi né cristalli sfaccettati.
   function slime(x,z,seed){
