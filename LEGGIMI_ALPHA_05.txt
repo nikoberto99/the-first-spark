@@ -1,0 +1,1 @@
+THE FIRST SPARK ALPHA 0.5\nMago Meshy + 3 slime verdi + 2 goblin Meshy.\nCaricare tutti i file e la cartella icons su GitHub Pages.\nI modelli non hanno rigging, quindi si muovono senza animazioni scheletriche.\nATTENZIONE: i potenziamenti delle versioni più vecchie non sono inclusi negli ZIP forniti; occorre il progetto che li contiene per ripristinarli fedelmente.\n
