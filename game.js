@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.3 | Foresta Incantata
+/* THE FIRST SPARK — Alpha 0.6 | Foresta Incantata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -21,11 +21,11 @@ function init(){
   scene.background=new THREE.Color('#b9dadd');
   scene.fog=new THREE.FogExp2('#b9dadd',.024);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.6));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.35));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.32;
-  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.enabled=!(window.matchMedia&&window.matchMedia('(pointer: coarse)').matches);
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   $('#game').appendChild(renderer.domElement);
   const camera=new THREE.OrthographicCamera(-8,8,8,-8,.1,120);
@@ -33,7 +33,7 @@ function init(){
   const world=new THREE.Group();scene.add(world);
   scene.add(new THREE.HemisphereLight('#f5fff2','#68828b',2.05));
   const sun=new THREE.DirectionalLight('#fff2d5',2.65);
-  sun.position.set(-10,19,8);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);
+  sun.position.set(-10,19,8);sun.castShadow=true;sun.shadow.mapSize.set(768,768);
   sun.shadow.camera.left=-17;sun.shadow.camera.right=17;sun.shadow.camera.top=17;sun.shadow.camera.bottom=-17;
   sun.shadow.camera.near=1;sun.shadow.camera.far=46;sun.shadow.normalBias=.027;
   scene.add(sun);scene.add(sun.target);
@@ -260,6 +260,7 @@ function init(){
       const loader=new loaderModule.GLTFLoader();
       enemyLoader=loader;
       loadEnemyModels();
+      loadDecorAssets(loader);
       loader.load('./mago-colorato.glb',gltf=>{
         const model=gltf.scene;
         const bounds=new THREE.Box3().setFromObject(model);
@@ -269,12 +270,84 @@ function init(){
         const scale=2.72/size.y;
         model.scale.setScalar(scale);
         model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
-        model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+        model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
         hero.motion.add(model);
         console.info('Protagonista Meshy caricato correttamente');
       },undefined,error=>{console.error('Caricamento del mago fallito:',error);toast('Impossibile caricare il modello 3D',4);});
     }catch(error){console.error('GLTFLoader non disponibile:',error);toast('Errore caricamento protagonista',4);}
   })();
+  // Alpha 0.6: gli oggetti ambientali Meshy sono caricati in sequenza per
+  // limitare i picchi di memoria su iPhone. Tutti i GLB restano senza rigging.
+  const modelSources={
+    bow:'./assets/bow.glb',dagger:'./assets/dagger.glb',mace:'./assets/mace.glb',
+    boat:'./assets/boat.glb',pine:'./assets/pine.glb',palm:'./assets/palm.glb',
+    tree:'./assets/tree.glb',rock_big:'./assets/rock_big.glb',
+    rock_mid:'./assets/rock_mid.glb',bridge:'./assets/bridge.glb'
+  };
+  const environmentSlots=[
+    ['pine',[-18,0,-10],5.0,0.2],['pine',[17,0,10],5.5,1.4],
+    ['palm',[-16,0,13],4.4,.6],['palm',[19,0,-12],4.8,2.2],
+    ['tree',[-13,0,-15],5.4,0],['tree',[16,0,17],5.1,2.6],
+    ['rock_big',[-5,0,7],1.7,.3],['rock_big',[16,0,-5],2.1,1.1],
+    ['rock_mid',[-7,0,-8],1.1,.4],['rock_mid',[12,0,9],1.3,2.5],
+    ['bridge',[-10,0,5.5],3.7,.25],['boat',[-11,0,10.0],2.8,1.4]
+  ];
+  function normalizeModel(source,targetHeight){
+    const box=new THREE.Box3().setFromObject(source),size=box.getSize(new V());
+    if(!Number.isFinite(size.y)||size.y<.00001)throw Error('Dimensioni GLB non valide');
+    const scale=targetHeight/size.y;
+    source.scale.setScalar(scale);
+    source.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
+    source.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
+    return source;
+  }
+  async function loadOneAsset(loader,key){
+    try{
+      const gltf=await new Promise((resolve,reject)=>loader.load(modelSources[key],resolve,undefined,reject));
+      const scene=gltf.scene;
+      if(key==='bow'){
+        normalizeModel(scene,1.06);hero.bow.children.forEach(child=>{if(child!==bowGem)child.visible=false;});
+        hero.bow.add(scene);
+      }else if(key==='dagger'||key==='mace'){
+        const height=key==='dagger'?.67:1.5;
+        normalizeModel(scene,height);
+        if(key==='dagger'){
+          weaponAssets.dagger=scene;
+          for(const e of enemies)if(e.userData.kind==='goblin')attachDagger(e);
+        }else{
+          // Il Boss Meshy originale contiene gia una mazza: quella separata
+          // viene esposta nell'accampamento, evitando armi doppie sul Boss.
+          const display=new THREE.Group();display.position.set(8.5,0,-4.5);
+          scene.rotation.z=-.24;display.add(scene);world.add(display);
+          weaponAssets.mace=scene;
+        }
+      }else{
+        const heights={pine:5,palm:4.5,tree:4.7,rock_big:1.45,rock_mid:.82,bridge:1.5,boat:1.45};
+        normalizeModel(scene,heights[key]);
+        for(const [name,pos,height,rotation] of environmentSlots){
+          if(name!==key)continue;
+          const instance=scene.clone(true),holder=new THREE.Group();
+          holder.position.set(...pos);holder.rotation.y=rotation;holder.add(instance);
+          world.add(holder);
+        }
+      }
+      loadedAssets.add(key);updateAssetStatus();
+    }catch(err){console.warn('Asset facoltativo non caricato:',key,err);failedAssets.add(key);updateAssetStatus();}
+  }
+  const loadedAssets=new Set(),failedAssets=new Set(),weaponAssets={};
+  function updateAssetStatus(){
+    const el=$('#asset-status');if(el)el.textContent=`Modelli aggiuntivi: ${loadedAssets.size}/${Object.keys(modelSources).length}`+(failedAssets.size?` · ${failedAssets.size} non caricati`:'');
+  }
+  function attachDagger(e){
+    if(e.userData.daggerAttached||!weaponAssets.dagger)return;
+    const copy=weaponAssets.dagger.clone(true);
+    // Posizione indicativa: il Goblin non e ancora riggato.
+    copy.position.x+=.60;copy.position.y+=.63;copy.position.z+=.15;
+    copy.rotation.z=-.65;e.userData.body.add(copy);e.userData.daggerAttached=true;
+  }
+  async function loadDecorAssets(loader){
+    for(const key of Object.keys(modelSources))await loadOneAsset(loader,key);
+  }
   const facing=new V(0,0,1);
   // Slime morbidi e animati, non piramidi né cristalli sfaccettati.
   function slime(x,z,seed){
@@ -301,13 +374,13 @@ function init(){
   const enemyAssets={};
   function loadEnemyModels(){
     if(!enemyLoader)return;
-    for(const [type,path] of Object.entries({slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb'})){
+    for(const [type,path] of Object.entries({slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb',boss:'./assets/boss.glb'})){
       enemyLoader.load(path,gltf=>{
         const scene=gltf.scene;
         const box=new THREE.Box3().setFromObject(scene);
         const size=box.getSize(new V());
         if(!size.y||!Number.isFinite(size.y))return;
-        const scale=(type==='goblin'?1.85:1.22)/size.y;
+        const scale=(type==='boss'?3.25:type==='goblin'?1.85:1.22)/size.y;
         scene.scale.setScalar(scale);
         scene.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
         enemyAssets[type]=scene;
@@ -320,8 +393,9 @@ function init(){
     if(!source||data.meshyLoaded)return;
     data.body.clear();
     const visual=source.clone(true);
-    visual.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
+    visual.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
     data.body.add(visual);data.meshyLoaded=true;
+    if(data.kind==='goblin')attachDagger(e);
   }
   function goblin(x,z,seed){
     const e=slime(x,z,seed);
@@ -333,6 +407,15 @@ function init(){
     applyEnemyAsset(e);
     return e;
   }
+  function bossGoblin(x,z,seed){
+    const e=slime(x,z,seed);
+    e.userData.kind='boss';e.userData.hp=24;e.userData.maxHp=24;
+    e.userData.speed=.75;e.userData.attack=1.3;
+    e.userData.life.position.y=3.5;
+    e.userData.fill.material=e.userData.fill.material.clone();
+    e.userData.fill.material.color.set('#f44e61');
+    applyEnemyAsset(e);return e;
+  }
   function spawnEnemy(x,z,i){
     const e=i<3?slime(x,z,i):goblin(x,z,i);
     if(i<3){e.userData.kind='slime';applyEnemyAsset(e);}
@@ -342,28 +425,91 @@ function init(){
   const origins=[[-.6,2.5],[2.8,-2.5],[5.0,3.8],[11.7,-2.1],[14.2,3.3]];
   origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
   let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0,winTimer=-1;
+  let level=1,xp=0,maxHealth=100,damage=1,fireRate=1,moveSpeed=4.15,
+      extraArrows=0,pierce=0,regeneration=0,stage=1,element='arcana',upgradeQueue=0;
+  const upgradeLevels={};
+  const elements={arcana:{label:'Arcana',color:'#b5f3fa'},fire:{label:'Fuoco',color:'#ff9a54'},ice:{label:'Gelo',color:'#86ddff'}};
+  const upgrades=[
+    {id:'power',icon:'⚔️',name:'Freccia potente',desc:'+1 danno per colpo',max:5,apply:()=>damage++},
+    {id:'rapid',icon:'⚡',name:'Tiro rapido',desc:'Frequenza di tiro +18%',max:4,apply:()=>fireRate*=1.18},
+    {id:'multishot',icon:'🏹',name:'Doppia freccia',desc:'+1 freccia per attacco',max:2,apply:()=>extraArrows++},
+    {id:'pierce',icon:'🎯',name:'Perforazione',desc:'Le frecce attraversano un nemico in più',max:2,apply:()=>pierce++},
+    {id:'speed',icon:'👟',name:'Passo leggero',desc:'Velocità movimento +12%',max:3,apply:()=>moveSpeed*=1.12},
+    {id:'health',icon:'❤️',name:'Cuore magico',desc:'+25 salute massima e cura 25 HP',max:4,apply:()=>{maxHealth+=25;health=Math.min(maxHealth,health+25)}},
+    {id:'regen',icon:'✨',name:'Rigenerazione',desc:'Recupera 0,65 HP al secondo',max:3,apply:()=>regeneration+=.65},
+    {id:'fire',icon:'🔥',name:'Frecce di fuoco',desc:'Sblocca le frecce infuocate',max:1,apply:()=>{element='fire';refreshElement()}},
+    {id:'ice',icon:'❄️',name:'Frecce di gelo',desc:'Sblocca le frecce rallentanti',max:1,apply:()=>{element='ice';refreshElement()}}
+  ];
+  function xpNeeded(){return 16+(level-1)*13;}
+  function refreshElement(){
+    const b=$('#element-button');if(b)b.textContent=elements[element].label+' ◈';
+    gemMaterial.color.set(elements[element].color);gemMaterial.emissive.set(elements[element].color);
+  }
+  const gemMaterial=new THREE.MeshStandardMaterial({color:'#b5f3fa',emissive:'#64a8e7',emissiveIntensity:1.5,roughness:.24});
+  const bowGem=ball(hero.bow,gemMaterial,[.20,0,.12],[.12,.13,.12],true,false);
+  function openUpgrade(){
+    if(state!=='playing'||upgradeQueue<=0)return;
+    state='upgrading';
+    const available=upgrades.filter(u=>(upgradeLevels[u.id]||0)<u.max);
+    if(!available.length){upgradeQueue=0;state='playing';return;}
+    const selected=[...available].sort((a,b)=>rand(level*91+a.id.length*13+upgrades.indexOf(a)*7)-rand(level*91+b.id.length*13+upgrades.indexOf(b)*7)).slice(0,3);
+    const elemental=level===2?available.find(u=>u.id==='fire'):level===3?available.find(u=>u.id==='ice'):null;
+    if(elemental&&!selected.includes(elemental))selected[2]=elemental;
+    const panel=$('#upgrade-panel');panel.innerHTML='';
+    for(const u of selected){
+      const button=document.createElement('button');button.className='upgrade-card';
+      button.innerHTML=`<span class="upgrade-icon">${u.icon}</span><span class="upgrade-name">${u.name}</span><span class="upgrade-desc">${u.desc}</span><span class="upgrade-stack">Livello ${(upgradeLevels[u.id]||0)+1}/${u.max}</span>`;
+      button.addEventListener('click',()=>{
+        upgradeLevels[u.id]=(upgradeLevels[u.id]||0)+1;u.apply();upgradeQueue--;
+        $('#upgrade-overlay').classList.remove('visible');updateHud();
+        state='playing';toast('POTENZIAMENTO: '+u.name.toUpperCase(),2);
+        if(upgradeQueue>0)openUpgrade();
+      });panel.appendChild(button);
+    }
+    $('#upgrade-title').textContent='LIVELLO '+level+' · SCEGLI UN POTENZIAMENTO';
+    $('#upgrade-overlay').classList.add('visible');
+  }
+  function gainXp(amount){
+    xp+=amount;
+    while(xp>=xpNeeded()){
+      xp-=xpNeeded();level++;upgradeQueue++;
+    }
+    updateHud();if(upgradeQueue>0&&state==='playing')openUpgrade();
+  }
+  function cycleElement(){
+    const unlocked=['arcana'];if(upgradeLevels.fire)unlocked.push('fire');if(upgradeLevels.ice)unlocked.push('ice');
+    element=unlocked[(unlocked.indexOf(element)+1)%unlocked.length];refreshElement();
+  }
+  $('#element-button').addEventListener('click',cycleElement);
+
   const arrows=[],sparks=[];
   const move={x:0,y:0};const keys=new Set();let joyPointer=null;
   let popupTimer=0;
   function toast(t,sec=2){$('#toast').textContent=t;toastTime=sec}
   function updateHud(){
-    $('#hpbar').style.width=health+'%';$('#hptext').textContent=health+' / 100 HP';
-    $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent='Nemici '+kills+' / 5';
+    $('#hpbar').style.width=(health/maxHealth*100)+'%';$('#hptext').textContent=Math.ceil(health)+' / '+maxHealth+' HP';
+    $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent=stage===1?'Nemici '+Math.min(kills,5)+' / 5':stage===2?'BOSS GOBLIN':'BOSS SCONFITTO';
+    $('#level').textContent='Livello '+level;$('#xpbar').style.width=(xp/xpNeeded()*100)+'%';
+    $('#quest-text').textContent=stage===1?'Sconfiggi 5 nemici e ottieni potenziamenti':stage===2?'Sconfiggi il Boss Goblin':'Il cristallo si è risvegliato!';
   }
   function showDialog(title,detail,button='CONTINUA'){
     $('#dialog').classList.add('visible');$('#dialog-text').innerHTML=detail;
     $('.dialog-card h1').textContent=title;$('#start').innerHTML=button+' <span>➜</span>';
   }
   function start(){
-    if(state==='won')reset();
+    if(state==='won'||state==='lost')reset();
     state='playing';$('#dialog').classList.remove('visible');toast('Segui il sentiero e scopri la foresta!',3);
   }
   function reset(){
     for(const e of enemies)world.remove(e);enemies.length=0;
     origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
-    for(const a of arrows)world.remove(a.mesh);arrows.length=0;
+    for(const a of arrows)removeArrow(a);arrows.length=0;
     for(const a of sparks)world.remove(a.mesh);sparks.length=0;
-    hero.root.position.set(-6,0,.55);health=100;coins=0;kills=0;centerCrystal.visible=false;winTimer=-1;cooldown=0;updateHud();
+    hero.root.position.set(-6,0,.55);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
+    damage=1;fireRate=1;moveSpeed=4.15;extraArrows=0;pierce=0;regeneration=0;
+    stage=1;element='arcana';upgradeQueue=0;Object.keys(upgradeLevels).forEach(k=>delete upgradeLevels[k]);
+    $('#upgrade-overlay').classList.remove('visible');refreshElement();
+    centerCrystal.visible=false;winTimer=-1;cooldown=0;updateHud();
   }
   $('#start').addEventListener('click',start);
   $('#pause').addEventListener('click',()=>{
@@ -375,23 +521,32 @@ function init(){
   }
   function shoot(){
     if(state!=='playing'||cooldown>0)return;
-    cooldown=.49;attackSwing=1;
-    const target=nearestEnemy();const start=hero.root.position.clone().add(new V(.04,1.1,0));
+    cooldown=.49/fireRate;attackSwing=1;
+    const target=nearestEnemy(),start=hero.root.position.clone().add(new V(.04,1.1,0));
     const aim=target?target.position.clone().add(new V(0,.53,0)):start.clone().addScaledVector(facing,12);
-    const dir=aim.clone().sub(start).normalize();if(target)facing.copy(dir).setY(0).normalize();
-    const g=new THREE.Group();g.position.copy(start);world.add(g);
-    stick(g,m.bow,[0,-.34,0],[0,.34,0],.028,.027,8);
-    mesh(new THREE.ConeGeometry(.09,.22,12),mat('#c8dfdd',.42),g,[0,.42,0]);
-    for(let s of [-1,1]){const feather=ball(g,m.white,[s*.07,-.26,0],[.045,.12,.024],true,false);feather.rotation.z=s*.22}
-    g.quaternion.setFromUnitVectors(new V(0,1,0),dir);
-    arrows.push({mesh:g,dir,target,life:1.5});
+    const baseDir=aim.clone().sub(start).normalize();if(target)facing.copy(baseDir).setY(0).normalize();
+    for(let i=0;i<=extraArrows;i++){
+      const angle=(i-extraArrows/2)*.14,dir=baseDir.clone().applyAxisAngle(new V(0,1,0),angle);
+      const g=new THREE.Group();g.position.copy(start);world.add(g);
+      const color=elements[element].color;
+      stick(g,mat('#91633e'),[0,-.34,0],[0,.34,0],.028,.027,8);
+      mesh(new THREE.ConeGeometry(.09,.22,10),new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.7}),g,[0,.42,0]);
+      for(let sign of [-1,1])ball(g,m.white,[sign*.07,-.26,0],[.045,.12,.024],true,false);
+      g.quaternion.setFromUnitVectors(new V(0,1,0),dir);
+      arrows.push({mesh:g,dir,target:extraArrows?null:target,life:1.7,pierces:pierce,hit:new Set(),element});
+    }
     if(navigator.vibrate)navigator.vibrate(9);
+  }
+  function removeArrow(a){
+    world.remove(a.mesh);a.mesh.traverse(o=>{if(o.isMesh&&o.geometry&&o.geometry!==sphere&&o.geometry!==sphereLow)o.geometry.dispose();});
   }
   $('#fire').addEventListener('pointerdown',e=>{e.preventDefault();shoot()});
   window.addEventListener('keydown',e=>{
     const k=e.key.toLowerCase();keys.add(k);
     if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();
     if(k===' '&&!e.repeat)shoot();
+    if(k==='e'&&!e.repeat)cycleElement();
+    if(state==='upgrading'&&['1','2','3'].includes(k))$('#upgrade-panel').children[Number(k)-1]?.click();
     if(k==='escape'&&state==='playing')$('#pause').click();
   });
   window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
@@ -419,21 +574,40 @@ function init(){
     }
   }
   function defeated(e){
-    const pos=e.position.clone().add(new V(0,.50,0));sparkAt(pos,'#b7fff0',12);
+    const kind=e.userData.kind;
+    const pos=e.position.clone().add(new V(0,.50,0));sparkAt(pos,kind==='boss'?'#ffb17e':'#b7fff0',kind==='boss'?26:12);
     world.remove(e);const i=enemies.indexOf(e);if(i>=0)enemies.splice(i,1);
-    coins+=20;kills++;updateHud();toast('✦ +20 MONETE · SLIME SCONFITTO!',1.4);
-    if(kills>=5){winTimer=1.8;centerCrystal.visible=true;sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#a7eaff',22);toast('IL CRISTALLO DELLA FORESTA SI È RISVEGLIATO!',2.7)}
+    const reward=kind==='boss'?150:kind==='goblin'?30:20;
+    coins+=reward;kills++;updateHud();
+    toast('✦ +'+reward+' MONETE · '+kind.toUpperCase()+' SCONFITTO!',1.6);
+    if(kind==='boss'){
+      stage=3;winTimer=2.0;centerCrystal.visible=true;
+      sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#a7eaff',22);
+      toast('IL BOSS È SCONFITTO! IL CRISTALLO SI RISVEGLIA!',2.7);
+      return;
+    }
+    gainXp(kind==='goblin'?20:12);
+    if(stage===1&&kills>=5){
+      stage=2;const boss=bossGoblin(13.2,0.8,89);enemies.push(boss);
+      // Il boss arriva dopo i cinque nemici iniziali.
+      toast('ATTENZIONE! È ARRIVATO IL BOSS GOBLIN!',3.5);updateHud();
+    }
   }
-  function hurt(e){
-    e.userData.hp--;e.userData.flash=.16;e.userData.life.visible=true;
-    e.userData.fill.scale.x=Math.max(.01,e.userData.hp/e.userData.maxHp);
-    sparkAt(e.position.clone().add(new V(0,.52,0)),'#eaffd3',5);
-    if(e.userData.hp<=0)defeated(e);
+  function hurt(e,a){
+    const data=e.userData;
+    data.hp=Math.max(0,data.hp-damage);data.flash=.16;data.life.visible=true;
+    data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
+    if(a?.element==='ice')data.slow=Math.max(data.slow||0,2.8);
+    if(a?.element==='fire')data.burn=Math.max(data.burn||0,2.6);
+    sparkAt(e.position.clone().add(new V(0,.52,0)),elements[a?.element||'arcana'].color,5);
+    if(data.hp<=0)defeated(e);
   }
   function takeDamage(amount){
     health=Math.max(0,health-amount);updateHud();shake=.25;
     if(navigator.vibrate)navigator.vibrate(24);
-    if(health===0){health=100;hero.root.position.set(-6,0,.55);updateHud();toast('Sei tornato all’inizio della foresta!',2.8)}
+    if(health===0){
+      state='lost';showDialog('LA SCINTILLA SI È SPENTA','Hai raccolto <b>'+coins+' monete</b> e raggiunto il livello <b>'+level+'</b>. Riprova e scegli potenziamenti diversi.','RIPROVA');
+    }
   }
   function resize(){
     const w=window.innerWidth,h=window.innerHeight;
@@ -460,8 +634,8 @@ function init(){
         const mx=x/dist,my=y/dist;
         // Asse del joystick allineato alla telecamera isometrica.
         const vx=(mx+my)*Math.SQRT1_2,vz=(my-mx)*Math.SQRT1_2;
-        hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x+vx*4.15*dt*strength,-23,23);
-        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z+vz*4.15*dt*strength,-22,22);
+        hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x+vx*moveSpeed*dt*strength,-23,23);
+        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z+vz*moveSpeed*dt*strength,-22,22);
         facing.set(vx,0,vz);hero.motion.position.y=.045+Math.sin(elapsed*13)*.04;
         hero.legs[0].rotation.x=Math.sin(elapsed*12)*.20;
         hero.legs[1].rotation.x=-hero.legs[0].rotation.x;
@@ -472,6 +646,7 @@ function init(){
         hero.arms[0].rotation.x*=.82;
       }
       cooldown=Math.max(0,cooldown-dt);
+      if(regeneration>0&&health<maxHealth){health=Math.min(maxHealth,health+regeneration*dt);updateHud();}
       attackSwing=Math.max(0,attackSwing-dt*3.3);
       hero.arms[1].rotation.z=-.25*attackSwing;
       hero.bow.rotation.z=-.35*attackSwing;
@@ -480,11 +655,18 @@ function init(){
       for(const e of enemies){
         const data=e.userData;
         const dx=hero.root.position.x-e.position.x,dz=hero.root.position.z-e.position.z,d=Math.hypot(dx,dz);
-        if(d<8.5&&d>1.03){e.position.x+=dx/d*data.speed*dt;e.position.z+=dz/d*data.speed*dt}
-        if(d<1.03){data.attack-=dt;if(data.attack<=0){takeDamage(9);data.attack=1.28}}
+        if(data.burn>0){data.burn-=dt;data.burnTick=(data.burnTick||0)+dt;
+          if(data.burnTick>=.75){data.burnTick=0;data.hp=Math.max(0,data.hp-1);data.life.visible=true;data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
+            if(data.hp<=0){defeated(e);continue;}}
+        }
+        data.slow=Math.max(0,(data.slow||0)-dt);
+        const slowFactor=data.slow>0?.55:1;
+        const reach=data.kind==='boss'?1.65:1.03;
+        if(d<9.5&&d>reach){e.position.x+=dx/d*data.speed*slowFactor*dt;e.position.z+=dz/d*data.speed*slowFactor*dt}
+        if(d<reach){data.attack-=dt;if(data.attack<=0){takeDamage(data.kind==='boss'?18:9);data.attack=data.kind==='boss'?1.65:1.28}}
         const b=data.body;
-        b.scale.y=1+(data.kind==='goblin'?.012:.055)*Math.sin(elapsed*6+data.phase);
-        b.scale.x=1-(data.kind==='goblin'?.008:.036)*Math.sin(elapsed*6+data.phase);
+        b.scale.y=1+(data.kind!=='slime'?.012:.055)*Math.sin(elapsed*6+data.phase);
+        b.scale.x=1-(data.kind!=='slime'?.008:.036)*Math.sin(elapsed*6+data.phase);
         b.position.y=Math.max(0,Math.sin(elapsed*3+data.phase)*.035);
         b.rotation.y=Math.atan2(dx,dz);
         if(data.flash>0){data.flash-=dt;b.scale.multiplyScalar(1.006)}
@@ -503,11 +685,15 @@ function init(){
         let hitOne=false;
         for(const e of [...enemies]){
           const h=e.position.clone().add(new V(0,.53,0));
-          if(a.mesh.position.distanceTo(h)<.62){hurt(e);hitOne=true;break}
+          const radius=e.userData.kind==='boss'?1.15:.62;
+          if(!a.hit.has(e)&&a.mesh.position.distanceTo(h)<radius){
+            a.hit.add(e);hurt(e,a);
+            if(a.pierces>0){a.pierces--;a.target=null;}else{hitOne=true;break}
+          }
         }
-        if(hitOne||a.life<0){world.remove(a.mesh);arrows.splice(i,1)}
+        if(hitOne||a.life<0){removeArrow(a);arrows.splice(i,1)}
       }
-      if(winTimer>=0){winTimer-=dt;if(winTimer<0){state='won';showDialog('CRISTALLO RISVEGLIATO!','Hai sconfitto tutti gli slime e i goblin e ottenuto <b>'+coins+' monete</b>.<br>Questa è una prova di stile 3D chibi: il viaggio nelle dieci isole continua nelle prossime versioni.','GIOCA DI NUOVO')}}
+      if(winTimer>=0){winTimer-=dt;if(winTimer<0){state='won';showDialog('CRISTALLO RISVEGLIATO!','Hai sconfitto il Boss Goblin, raggiunto il <b>livello '+level+'</b> e raccolto <b>'+coins+' monete</b>!<br>La prima isola è salva.','GIOCA DI NUOVO')}}
       if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('#toast').textContent=''}
     }else{
       hero.motion.position.y=Math.sin(elapsed*2.0)*.026;
@@ -530,5 +716,6 @@ function init(){
   camera.position.copy(hero.root.position).add(cameraOffset);
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();loading.classList.add('hide');
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0331').catch(()=>{});
+  refreshElement();updateAssetStatus();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0600').catch(()=>{});
 }

@@ -1,0 +1,43 @@
+THE FIRST SPARK — ALPHA 0.6 — FORESTA INCANTATA
+================================================
+BASE: Alpha 0.5 fornita dall'utente. Nessuna modifica al repository GitHub effettuata.
+
+AGGIUNTE:
+- Mago, Slime, Goblin originali dalla Alpha 0.5.
+- Boss Goblin e 10 modelli Mobile gia ottimizzati (arco, pugnale, mazza,
+  barca, pino, palma, latifoglia, due rocce, ponte).
+- I modelli si caricano progressivamente. Se uno fallisce, il gioco continua.
+- Progressione XP e livelli; scelta fra 3 potenziamenti a ogni livello.
+- Danni, tiro rapido, multitiro, perforazione, velocita, salute,
+  rigenerazione, frecce fuoco e gelo; cambio elemento con E o pulsante.
+- Dopo i primi 5 nemici compare il Boss; vittoria sconfiggendo il Boss.
+- HUD aggiornato e nuova schermata di potenziamento.
+
+CONTROLLI:
+- iPhone: joystick sinistro, pulsante arco destro, pulsante elemento.
+- Computer: WASD/frecce, spazio per attaccare, E per elemento,
+  1/2/3 per scegliere il potenziamento.
+
+PUBBLICAZIONE:
+- Estrarre lo ZIP e caricare TUTTI i file e la cartella assets/ nella
+  root del repository GitHub Pages, sovrascrivendo la vecchia Alpha.
+- Attendere il deploy e ricaricare la pagina. Se necessario chiudere
+  e riaprire la PWA per svuotare la vecchia cache.
+- Il motore Three.js richiede una connessione Internet (CDN).
+- Non avviare index.html con file://: usare GitHub Pages o un server locale.
+
+LIMITI NOTI:
+- I personaggi Meshy non sono ancora riggati; le animazioni sono
+  provvisorie (oscillazioni, orientamento e movimento del modello intero).
+- L'arco non segue una vera mano scheletrica: posizionamento indicativo.
+- Il Boss originale incorpora gia una mazza; il GLB della mazza separata
+  e mostrato come oggetto di scena, per non duplicare l'arma.
+- Il ponte e la barca sono posizionati a scopo dimostrativo; manca
+  ancora un terreno con spiaggia, attraversamenti e collisioni dedicate.
+- Dimensioni/orientamenti degli asset normalizzati a runtime;
+  richiedono verifica visiva su iPhone e rifinitura artistica.
+- Il gioco non e stato testato su un iPhone fisico.
+- Gli asset GLB non sono conservati nella cache offline per evitare
+  esaurimento dello spazio: il gioco richiede rete al primo caricamento.
+- Non sono inclusi gli edifici Goblin/roccaforte perche i relativi GLB
+  non sono stati ancora caricati dall'utente (solo immagini 2D).
