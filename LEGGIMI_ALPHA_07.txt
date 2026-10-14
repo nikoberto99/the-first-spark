@@ -1,0 +1,45 @@
+THE FIRST SPARK — ALPHA 0.7 MOBILE OTTIMIZZATA
+==============================================
+
+VERSIONE DI PARTENZA: Alpha 0.6 fornita dall'utente.
+
+OTTIMIZZAZIONI
+- Alleggeriti TUTTI i 14 GLB del pacchetto (mago, Goblin, Slime, Boss,
+  arco, pugnale, mazza, barca, pino, palma, latifoglia, due rocce e ponte).
+- Geometrie decimate conservando coordinate UV, materiali e dimensioni
+  complessive. Texture incorporate ricampionate e compresse.
+- Peso complessivo GLB: 72.344.996 byte -> 22.029.228 byte (-69,5%).
+- Mago: 24.850.572 -> 3.516.536 byte; 848.120 -> 95.000 triangoli.
+- Goblin: 8.641.880 -> 2.209.576 byte; 340.114 -> 52.000 triangoli.
+- Slime: 7.344.104 -> 1.099.608 byte; 99.512 -> 27.999 triangoli.
+- Boss: 8.859.664 -> 3.477.152 byte; 303.954 -> 84.999 triangoli.
+
+CARICAMENTO
+- Il gioco aspetta il mago e i nemici iniziali prima di mostrare
+  la schermata Gioca. In caso di errore del mago mostra un messaggio.
+- Boss e decorazioni si caricano dopo i personaggi essenziali.
+- I GLB scaricati vengono memorizzati nella cache del service worker
+  quando lo spazio disponibile e le impostazioni del browser lo consentono.
+- Il primo accesso richiede comunque il download dei modelli.
+
+FUNZIONALITA' CONSERVATE
+- 9 potenziamenti (danno, tiro rapido, multitiro, perforazione,
+  velocita, salute, rigenerazione, fuoco, gelo), XP e livelli.
+- Joystick, attacco con arco, frecce elementali, nemici, boss, HUD,
+  combattimento e schermata vittoria.
+
+PUBBLICAZIONE SU GITHUB PAGES
+1. Estrarre lo ZIP nell'app File.
+2. Caricare i file della cartella principale nella ROOT del repository.
+3. Caricare i file della sottocartella assets/ nella cartella assets/
+   del repository, mantenendo IDENTICI i nomi e la struttura.
+4. Attendere GitHub Pages e riaprire il gioco; in caso di vecchia
+   versione, chiudere e riaprire la web app / cancellare cache Safari.
+5. Non aprire index.html come file://: serve un server web.
+
+VERIFICHE
+- Tutti i 14 GLB ottimizzati si aprono con il parser 3D trimesh.
+- Sintassi game.js e sw.js verificata con Node.js.
+- Non e' stato effettuato un collaudo completo su iPhone: controllare
+  visivamente dettagli sottili, colori, ponte, armi e comportamento.
+- Alcuni modelli non sono riggati: animazioni ancora provvisorie.

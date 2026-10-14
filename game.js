@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.6 | Foresta Incantata
+/* THE FIRST SPARK — Alpha 0.7 | Foresta Incantata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -250,32 +250,52 @@ function init(){
     return {root,motion,arms,legs,bow};
   }
   const hero=heroModel();hero.root.position.set(-6,0,.55);
+  // Alpha 0.7: il mondo non diventa giocabile finché il protagonista e i
+  // nemici iniziali non sono pronti. Gli asset decorativi arrivano dopo.
   let enemyLoader=null;
-  // Importazione del modello completo di materiali e texture, senza rigging.
-  (async()=>{
+  let criticalAssetsReady=false;
+  async function loadHeroModel(loader){
+    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb',resolve,undefined,reject));
+    const model=gltf.scene;
+    const bounds=new THREE.Box3().setFromObject(model);
+    const size=bounds.getSize(new V());
+    const center=bounds.getCenter(new V());
+    if(!size.y||!Number.isFinite(size.y))throw Error('Dimensioni GLB del mago non valide');
+    const scale=2.72/size.y;
+    model.scale.setScalar(scale);
+    model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+    model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
+    hero.motion.add(model);
+    // Forza l'inizializzazione delle risorse grafiche prima di mostrare il menu.
+    renderer.compile(scene,camera);
+    console.info('Mago ottimizzato pronto');
+  }
+  async function initializeModels(){
     try{
-      let loaderModule;
-      try {loaderModule=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
-      catch(_){loaderModule=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
-      const loader=new loaderModule.GLTFLoader();
-      enemyLoader=loader;
-      loadEnemyModels();
-      loadDecorAssets(loader);
-      loader.load('./mago-colorato.glb',gltf=>{
-        const model=gltf.scene;
-        const bounds=new THREE.Box3().setFromObject(model);
-        const size=bounds.getSize(new V());
-        const center=bounds.getCenter(new V());
-        if(!size.y || !Number.isFinite(size.y))throw Error('Dimensioni GLB non valide');
-        const scale=2.72/size.y;
-        model.scale.setScalar(scale);
-        model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
-        model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
-        hero.motion.add(model);
-        console.info('Protagonista Meshy caricato correttamente');
-      },undefined,error=>{console.error('Caricamento del mago fallito:',error);toast('Impossibile caricare il modello 3D',4);});
-    }catch(error){console.error('GLTFLoader non disponibile:',error);toast('Errore caricamento protagonista',4);}
-  })();
+      hint.textContent='Preparazione del motore 3D…';
+      let module;
+      try{module=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
+      catch(_){module=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
+      const loader=new module.GLTFLoader();enemyLoader=loader;
+      hint.textContent='Caricamento del mago…';
+      await loadHeroModel(loader);
+      hint.textContent='Preparazione di Goblin e Slime…';
+      const ready=await Promise.allSettled([loadEnemyModel('slime'),loadEnemyModel('goblin')]);
+      const failures=ready.filter(r=>r.status==='rejected');
+      if(failures.length)console.warn('Alcuni nemici usano il modello provvisorio',failures);
+      criticalAssetsReady=true;
+      hint.textContent='Personaggi pronti!';
+      await new Promise(resolve=>requestAnimationFrame(resolve));
+      loading.classList.add('hide');
+      // Prima il boss, poi gli oggetti di scena: non rallentano l'avvio.
+      loadEnemyModel('boss').catch(e=>console.warn('Boss GLB non disponibile:',e))
+        .then(()=>loadDecorAssets(loader));
+    }catch(error){
+      console.error('Errore caricamento risorse fondamentali',error);
+      hint.textContent='Non riesco a caricare il mago. Controlla la connessione e aggiorna la pagina. '+String(error.message||error).slice(0,100);
+      hint.style.color='#ffe2a5';
+    }
+  }
   // Alpha 0.6: gli oggetti ambientali Meshy sono caricati in sequenza per
   // limitare i picchi di memoria su iPhone. Tutti i GLB restano senza rigging.
   const modelSources={
@@ -372,21 +392,20 @@ function init(){
   }
   // Nemici Meshy: manteniamo il corpo provvisorio come fallback fino al caricamento GLB.
   const enemyAssets={};
-  function loadEnemyModels(){
-    if(!enemyLoader)return;
-    for(const [type,path] of Object.entries({slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb',boss:'./assets/boss.glb'})){
-      enemyLoader.load(path,gltf=>{
-        const scene=gltf.scene;
-        const box=new THREE.Box3().setFromObject(scene);
-        const size=box.getSize(new V());
-        if(!size.y||!Number.isFinite(size.y))return;
-        const scale=(type==='boss'?3.25:type==='goblin'?1.85:1.22)/size.y;
-        scene.scale.setScalar(scale);
-        scene.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
-        enemyAssets[type]=scene;
-        for(const e of enemies)if(e.userData.kind===type)applyEnemyAsset(e);
-      },undefined,error=>console.warn('Modello '+type+' non caricato:',error));
-    }
+  async function loadEnemyModel(type){
+    if(!enemyLoader)throw Error('Caricatore non pronto');
+    const paths={slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb',boss:'./assets/boss.glb'};
+    const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
+    const scene=gltf.scene;
+    const box=new THREE.Box3().setFromObject(scene);
+    const size=box.getSize(new V());
+    if(!size.y||!Number.isFinite(size.y))throw Error('Dimensioni GLB non valide: '+type);
+    const scale=(type==='boss'?3.25:type==='goblin'?1.85:1.22)/size.y;
+    scene.scale.setScalar(scale);
+    scene.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
+    enemyAssets[type]=scene;
+    for(const e of enemies)if(e.userData.kind===type)applyEnemyAsset(e);
+    console.info('Modello nemico pronto:',type);
   }
   function applyEnemyAsset(e){
     const data=e.userData,source=enemyAssets[data.kind];
@@ -497,6 +516,7 @@ function init(){
     $('.dialog-card h1').textContent=title;$('#start').innerHTML=button+' <span>➜</span>';
   }
   function start(){
+    if(!criticalAssetsReady)return;
     if(state==='won'||state==='lost')reset();
     state='playing';$('#dialog').classList.remove('visible');toast('Segui il sentiero e scopri la foresta!',3);
   }
@@ -715,7 +735,7 @@ function init(){
   }
   camera.position.copy(hero.root.position).add(cameraOffset);
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
-  updateHud();tick();loading.classList.add('hide');
+  updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
   if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0600').catch(()=>{});
 }
