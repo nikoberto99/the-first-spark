@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.11 | Spiaggia, rocce e acqua viva
+/* THE FIRST SPARK — Alpha 0.12 | Prestazioni, biomi e arena Boss
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -21,7 +21,10 @@ function init(){
   scene.background=new THREE.Color('#b9dadd');
   scene.fog=new THREE.FogExp2('#b9dadd',.024);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.35));
+  // Mobile: meno pixel da disegnare, stessa dimensione visiva del canvas.
+  const mobileDevice=window.matchMedia('(pointer: coarse)').matches;
+  let qualityScale=mobileDevice?Math.min(window.devicePixelRatio||1,1):Math.min(window.devicePixelRatio||1,1.35);
+  renderer.setPixelRatio(qualityScale);
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.32;
@@ -90,7 +93,7 @@ function init(){
     t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;
   }
   function rand(n){const v=Math.sin(n*128.237+12.4)*43758.5453;return v-Math.floor(v)}
-  const ground=mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
+  const ground=mesh(new THREE.PlaneGeometry(150,150),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
   ground.rotation.x=-Math.PI/2;
   // Sentiero: UN'UNICA SUPERFICIE CURVA, non piu una fila di dischi sovrapposti.
   const pathPts=[[-22,-1],[-17,-1.1],[-13,-.4],[-9,.8],[-5,1.5],[-1,.5],[3,.35],[7,1.4],[12,1.1],[17,.1],[22,-.7]];
@@ -177,19 +180,19 @@ function init(){
   const waterPattern=new THREE.CanvasTexture(waterPatternCanvas);
   waterPattern.wrapS=waterPattern.wrapT=THREE.RepeatWrapping;
   waterPattern.repeat.set(2.2,2.2);waterPattern.colorSpace=THREE.SRGBColorSpace;
-  const pondWaves=makePondSurface(3.27,2.04,.037,
-    new THREE.MeshBasicMaterial({color:'#a6e3da',map:waterPattern,transparent:true,opacity:.54,
+  const pondWaves=makePondSurface(3.27,2.04,.075,
+    new THREE.MeshBasicMaterial({color:'#e5ffec',map:waterPattern,transparent:true,opacity:.80,
       depthWrite:false,side:THREE.DoubleSide}));
   const pondFoam=mesh(new THREE.RingGeometry(.93,1.01,90),
     new THREE.MeshBasicMaterial({color:'#e2fff2',transparent:true,opacity:.26,side:THREE.DoubleSide,depthWrite:false}),
-    pond,[0,.033,0],[3.50,2.22,1],false);
+    pond,[0,.086,0],[3.50,2.22,1],false);
   pondFoam.rotation.x=-Math.PI/2;
   const pondHighlights=[];
   for(let i=0;i<17;i++){
     const x=(rand(i*11+61)-.5)*5.8,z=(rand(i*23+70)-.5)*3.3;
     const h=mesh(new THREE.PlaneGeometry(.24+rand(i)*.27,.022),
       new THREE.MeshBasicMaterial({color:'#e8fffa',transparent:true,opacity:.20,depthWrite:false,side:THREE.DoubleSide}),
-      pond,[x,.040,z],[1,1,1],false);
+      pond,[x,.090,z],[1,1,1],false);
     h.rotation.x=-Math.PI/2;pondHighlights.push(h);
   }
   // Canne lungo la riva. Le rocce di contorno arrivano dal GLB.
@@ -202,15 +205,15 @@ function init(){
   }
   const ripples=[];
   for(let i=0;i<4;i++){
-    const ring=mesh(new THREE.RingGeometry(.18+i*.37,.205+i*.37,56),new THREE.MeshBasicMaterial({color:'#d1f5eb',transparent:true,opacity:.19,side:THREE.DoubleSide,depthWrite:false}),pond,[-.8,.03,.3],[1,.72,1],false);
+    const ring=mesh(new THREE.RingGeometry(.18+i*.37,.205+i*.37,56),new THREE.MeshBasicMaterial({color:'#d1f5eb',transparent:true,opacity:.19,side:THREE.DoubleSide,depthWrite:false}),pond,[-.8,.105,.3],[1,.72,1],false);
     ring.rotation.x=-Math.PI/2;ripples.push(ring);
   }
   for(let i=0;i<5;i++){
     const x=(rand(i+17)-.5)*4,z=(rand(i+77)-.5)*2.8;
-    const pad=flatEllipse(pond,mat('#7bad6d'),.34,.25,.05);pad.position.x=x;pad.position.z=z;
-    if(i%2===0){ball(pond,m.flowerYellow,[x,.11,z],[.11,.08,.11],true,false)}
+    const pad=flatEllipse(pond,mat('#7bad6d'),.34,.25,.115);pad.position.x=x;pad.position.z=z;
+    if(i%2===0){ball(pond,m.flowerYellow,[x,.18,z],[.11,.08,.11],true,false)}
   }
-  // Alpha 0.11: nessuna roccia procedurale: ogni sasso visibile viene
+  // Alpha 0.12: nessuna roccia procedurale: ogni sasso visibile viene
   // dal GLB Roccia_media, scalato in due taglie (media/piccola).
   // Alberi fiabeschi: tronco curvo, chiome tonde continue e sfumature naturali.
   // Alpha 0.9: eliminati gli alberi procedurali della vecchia versione.
@@ -229,8 +232,8 @@ function init(){
   const grassShape=new THREE.BufferGeometry();
   const grassVertices=[];
   for(let blade=0;blade<3;blade++){
-    const a=blade*Math.PI/3,dx=Math.cos(a)*.060,dz=Math.sin(a)*.060;
-    grassVertices.push(-dx*.17,0,-dz*.17, dx*.17,0,dz*.17, Math.sin(a)*.004,.010,Math.cos(a)*.004);
+    const a=blade*Math.PI/3,dx=Math.cos(a)*.13,dz=Math.sin(a)*.13;
+    grassVertices.push(-dx*.24,0,-dz*.24, dx*.24,0,dz*.24, Math.sin(a)*.012,.010,Math.cos(a)*.012);
   }
   grassShape.setAttribute('position',new THREE.Float32BufferAttribute(grassVertices,3));
   grassShape.computeVertexNormals();
@@ -254,8 +257,8 @@ function init(){
       !(x< -11&&x> -19&&z>1&&z<14) &&
       Math.hypot((x+10)/4.2,(z-9)/3.1)>1.12 &&
       Math.abs(x-riverX)>2.3 &&
-      Math.hypot((x-16)/7.2,(z+9)/6.3)>1 &&
-      Math.hypot((x-22)/14,(z+28)/13)>1 &&
+      Math.hypot((x-16)/8.5,(z+9)/7.6)>1 &&
+      Math.hypot((x-22)/19,(z+27)/18)>1 &&
       Math.hypot((x-9)/3.5,(z-1.45)/3.5)>1 &&
       !(x>14&&x<25&&z< -12&&z> -27&&Math.abs(x-(16+(z+12)*(-.37)))<2.0) &&
       !nearPath(x,z);
@@ -289,6 +292,34 @@ function init(){
     inst.position.set(x,.13,z);inst.rotation.set(0,0,0);const s=.06+rand(i)*.045;inst.scale.set(s,s*.55,s);inst.updateMatrix();petals.setMatrixAt(i,inst.matrix);
   }
   petals.castShadow=false;world.add(petals);
+  // ERBA VISIBILE: un centimetro reale è sub-pixel con questa telecamera.
+  // Oltre ai ciuffi 3D di 1 cm, un tappeto di piccoli fili sulla texture
+  // rende il sottobosco erboso anche dall'alto (solo due draw call).
+  function forestGrassOverlay(){
+    const c=document.createElement('canvas');c.width=c.height=512;
+    const ctx=c.getContext('2d');ctx.clearRect(0,0,512,512);
+    for(let i=0;i<12500;i++){
+      const x=rand(i*19+7)*512,y=rand(i*41+19)*512;
+      const nx=(x-256)/256,ny=(y-256)/256;
+      const falloff=Math.max(0,Math.min(1,(1.05-Math.hypot(nx,ny))/.30));
+      if(falloff<.02)continue;
+      ctx.strokeStyle=i%4===0?'#427c43':i%4===1?'#64934d':i%4===2?'#a3c278':'#4f8d53';
+      ctx.globalAlpha=(.12+rand(i*7)*.30)*falloff;
+      ctx.lineWidth=.55+rand(i*5)*1.25;
+      ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+(rand(i*13)-.5)*4,y-2-rand(i*3)*4);ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+    texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+    const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,opacity:.94,
+      side:THREE.DoubleSide,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1});
+    for(const [x,z,rx,rz] of [[-15,-14,26,24],[16,15,27,26],[-6,15,14,13]]){
+      const o=mesh(new THREE.PlaneGeometry(rx,rz),material,world,[x,-.043,z],[1,1,1],false);
+      o.rotation.x=-Math.PI/2;
+    }
+  }
+  forestGrassOverlay();
+
   for(let i=0;i<19;i++){
     const x=(rand(i*8+123)-.5)*46,z=(rand(i*7+213)-.5)*39;
     mushroom(x,z,.6+rand(i)*.8,i%2?m.flowers:m.blueFlower);
@@ -306,7 +337,7 @@ function init(){
   const crystalMesh=mesh(new THREE.OctahedronGeometry(.37,0),m.crystal,centerCrystal);
   const glow=new THREE.PointLight('#84efff',0,3.1);glow.position.set(0,.35,0);centerCrystal.add(glow);
   centerCrystal.visible=false;
-  // ALPHA 0.11 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
+  // ALPHA 0.12 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
   // Gli elementi architettonici goblin sono segnaposto originali e modulari:
   // potranno essere sostituiti dai futuri GLB senza toccare il gameplay.
   const env=new THREE.Group();env.name='Ambiente_Alpha_010';world.add(env);
@@ -382,26 +413,26 @@ function init(){
   // Segno dello scafo sulla sabbia; rende riconoscibile il punto d'approdo.
   terrainPatch(-18.5,15.1,2.35,1.15,mat('#d4b88c'),51,-.025);
 
-  // ALPHA 0.11: ARENA DEL BOSS GRANDE E LEGGIBILE.
+  // ALPHA 0.12: ARENA DEL BOSS GRANDE E LEGGIBILE.
   // 22 metri di diametro, collegata al campo goblin da un sentiero.
   const bossArena=new THREE.Group();bossArena.name='Arena_del_Boss_Grande';
-  bossArena.position.set(22,0,-28);env.add(bossArena);
-  terrainPatch(22,-28,13.2,12.6,mat('#728d6d'),44,-.041);
-  terrainPatch(22,-28,11.9,11.2,mat('#b7a98c'),45,-.028);
-  terrainPatch(22,-28,10.7,10.0,mat('#9ba88d'),46,-.014);
-  const arenaRing=mesh(new THREE.RingGeometry(10.45,11.10,96),
+  bossArena.position.set(22,0,-27);env.add(bossArena);
+  terrainPatch(22,-27,19.0,18.0,mat('#728d6d'),44,-.041);
+  terrainPatch(22,-27,17.3,16.3,mat('#b7a98c'),45,-.028);
+  terrainPatch(22,-27,15.8,14.7,mat('#9ba88d'),46,-.014);
+  const arenaRing=mesh(new THREE.RingGeometry(15.7,16.35,96),
     mat('#777e74',.98,{side:THREE.DoubleSide}),bossArena,[0,.016,0],[1,.91,1],false);
   arenaRing.rotation.x=-Math.PI/2;
   for(let i=0;i<18;i++){
     const a=i*Math.PI*2/18;
     if(a>1.05&&a<2.15)continue; // apertura verso il campo
-    const x=Math.cos(a)*11.1,z=Math.sin(a)*10.2;
+    const x=Math.cos(a)*16.25,z=Math.sin(a)*15.25;
     const stone=mesh(new THREE.CylinderGeometry(.37,.45,.40,7),em.darkStone,bossArena,[x,.16,z],[1,1,1],false);
     stone.rotation.y=a;
   }
   const bossTrailCurve=new THREE.CatmullRomCurve3([
     new V(16,0,-12.0),new V(17.0,0,-16.0),new V(18.8,0,-19.6),
-    new V(20.8,0,-23.2),new V(22,0,-26.0)
+    new V(20.8,0,-20.2),new V(22,0,-22.0)
   ],false,'catmullrom',.48);
   const btP=[],btI=[];
   for(let i=0;i<=80;i++){
@@ -443,8 +474,38 @@ function init(){
   const riverPattern=waterPattern.clone();riverPattern.needsUpdate=true;
   riverPattern.repeat.set(1.5,1.3);
   riverStrip(1.24,new THREE.MeshBasicMaterial({map:riverPattern,color:'#b9f0e3',
-    transparent:true,opacity:.40,side:THREE.DoubleSide,depthWrite:false}),.028,0);
+    transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),.090,0);
   // Riflessi d'acqua discreti, senza shader o effetti pesanti su iPhone.
+  // Fasce luminose che scorrono realmente lungo il fiume, unite in una
+  // sola geometria dinamica. Risultano visibili anche su schermi piccoli.
+  const flowCount=34,flowVertices=new Float32Array(flowCount*6*3);
+  const flowGeo=new THREE.BufferGeometry();
+  flowGeo.setAttribute('position',new THREE.BufferAttribute(flowVertices,3).setUsage(THREE.DynamicDrawUsage));
+  const flowMesh=mesh(flowGeo,new THREE.MeshBasicMaterial({color:'#e9fff5',
+    transparent:true,opacity:.55,depthWrite:false,side:THREE.DoubleSide}),env,[0,0,0],[1,1,1],false);
+  function updateFlowLines(t){
+    for(let i=0;i<flowCount;i++){
+      const z=-29+((i*2.83+t*(1.35+.18*(i%3)))%58);
+      const cx=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+      const side=(rand(i*37+11)-.5)*1.85,w=.035+.025*rand(i*7),length=.35+rand(i*13)*.65;
+      const x=cx+side,y=.132;
+      const j=i*18;
+      flowVertices.set([x-w,y,z,x+w,y,z,x-w,y,z+length,
+        x+w,y,z,x+w,y,z+length,x-w,y,z+length],j);
+    }
+    flowGeo.attributes.position.needsUpdate=true;
+    flowGeo.computeBoundingSphere();
+  }
+  updateFlowLines(0);
+  // Anelli più ampi che si espandono e si dissolvono sul laghetto.
+  const lakeRings=[];
+  for(let i=0;i<7;i++){
+    const ring=mesh(new THREE.RingGeometry(.62,.67,64),
+      new THREE.MeshBasicMaterial({color:'#f3fff0',transparent:true,opacity:.4,
+        side:THREE.DoubleSide,depthWrite:false}),pond,
+      [(i%3-1)*.75,.105,((i*2)%3-1)*.48],[1,1,1],false);
+    ring.rotation.x=-Math.PI/2;lakeRings.push(ring);
+  }
   const riverGlints=[];
   for(let i=0;i<16;i++){
     const z=-25+i*3.1,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
@@ -633,22 +694,33 @@ function init(){
     fireflies.push({mesh:light,x,z,y:light.position.y,phase:rand(i*9+2)*6.28});
   }
   // Altri elementi di scena sono statici e non modificano collisioni o nemici.
+  let lastWaterUpdate=-1;
   function animateEnvironment(time){
-    // Geometria dell'acqua aggiornata a ogni frame (circa 3.000 vertici):
-    // onde lente nel laghetto, flusso direzionale nel fiume.
-    for(const w of waterMeshes){
-      const a=w.geometry.attributes.position,base=w.base;
-      for(let i=0;i<a.count;i++){
-        const j=i*3,x=base[j],y=base[j+1],z=base[j+2];
-        const dy=w.type==='pond'
-          ? .025*Math.sin(x*2.6+time*1.65)*Math.cos(z*3.0-time*1.1)
-          : .028*Math.sin(z*2.4-time*3.2+x*2.0)+.012*Math.cos(z*4.0-time*4.3);
-        a.setY(i,y+dy);
+    // Onde geometriche a 12 FPS (anziché ogni frame): meno upload GPU.
+    // L'animazione delle texture e delle schiume resta fluida a ogni frame.
+    if(time-lastWaterUpdate>.08){
+      lastWaterUpdate=time;
+      for(const w of waterMeshes){
+        const a=w.geometry.attributes.position,base=w.base;
+        for(let i=0;i<a.count;i++){
+          const j=i*3,x=base[j],y=base[j+1],z=base[j+2];
+          const dy=w.type==='pond'
+            ? .035*Math.sin(x*1.9+time*2.0)*Math.cos(z*2.4-time*1.6)
+            : .048*Math.sin(z*2.0-time*3.8+x*1.7)+.016*Math.cos(z*3.4-time*4.0);
+          a.setY(i,y+dy);
+        }
+        a.needsUpdate=true;
       }
-      a.needsUpdate=true;
+      updateFlowLines(time);
     }
-    waterPattern.offset.x=time*.025;waterPattern.offset.y=time*.017;
-    riverPattern.offset.x=-time*.092;riverPattern.offset.y=time*.025;
+    for(let i=0;i<lakeRings.length;i++){
+      const phase=(time*.17+i/lakeRings.length)%1;
+      const scale=.42+phase*2.45;
+      lakeRings[i].scale.set(scale,scale*.68,1);
+      lakeRings[i].material.opacity=.53*(1-phase);
+    }
+    waterPattern.offset.x=time*.055;waterPattern.offset.y=time*.047;
+    riverPattern.offset.x=-time*.28;riverPattern.offset.y=time*.06;
     for(let i=0;i<riverGlints.length;i++){
       riverGlints[i].material.opacity=.17+.14*Math.sin(time*1.5+i*.85);
       riverGlints[i].position.z=-25+i*3.1+Math.sin(time*.8+i)*.18;
@@ -710,7 +782,7 @@ function init(){
   let enemyLoader=null;
   let criticalAssetsReady=false;
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0110',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0120',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -725,21 +797,21 @@ function init(){
     renderer.compile(scene,camera);
     console.info('Mago ottimizzato pronto');
   }
-  // Barra di caricamento con tempo minimo reale di 60 secondi e progresso
+  // Barra di caricamento con tempo minimo reale di 30 secondi e progresso
   // degli asset: non dichiara il 100% finché i file non sono pronti.
-  const MIN_LOADING_MS=60000;
+  const MIN_LOADING_MS=30000;
   const loadStarted=performance.now();
   let assetsFinished=false, assetsProgress=0, assetsTotal=1;
   const loadBar=$('#load-bar'),loadPercent=$('#load-percent'),loadClock=$('#load-clock');
   function updateLoadingUI(){
     const seconds=(performance.now()-loadStarted)/1000;
-    const timeProgress=Math.min(1,seconds/60);
+    const timeProgress=Math.min(1,seconds/30);
     const fileProgress=Math.min(1,assetsProgress/assetsTotal);
     const pct=Math.round(Math.min(timeProgress,fileProgress)*100);
     if(loadBar)loadBar.style.width=pct+'%';
     if(loadPercent)loadPercent.textContent=pct+'%';
-    if(loadClock)loadClock.textContent=assetsFinished&&seconds<60
-      ?'Preparazione del mondo · '+Math.ceil(60-seconds)+' s'
+    if(loadClock)loadClock.textContent=assetsFinished&&seconds<30
+      ?'Preparazione del mondo · '+Math.ceil(30-seconds)+' s'
       :assetsFinished?'Tutto pronto!':'Modelli caricati '+assetsProgress+' / '+assetsTotal;
     if(!loading.classList.contains('hide'))requestAnimationFrame(updateLoadingUI);
   }
@@ -794,15 +866,15 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0110',
-    fort_closed:'./assets/fort_closed.glb?v=0110',
-    goblin_tower:'./assets/goblin_tower.glb?v=0110',
-    goblin_tent:'./assets/goblin_tent.glb?v=0110',
-    goblin_fence:'./assets/goblin_fence.glb?v=0110',
-    boat:'./assets/boat.glb?v=0110',palm:'./assets/palm.glb?v=0110',
-    pine:'./assets/pine.glb?v=0110',tree:'./assets/tree.glb?v=0110',
-    rock_mid:'./assets/rock_mid.glb?v=0110',
-    bow:'./assets/bow.glb?v=0110',dagger:'./assets/dagger.glb?v=0110',mace:'./assets/mace.glb?v=0110'
+    fort_open:'./assets/fort_open.glb?v=0120',
+    fort_closed:'./assets/fort_closed.glb?v=0120',
+    goblin_tower:'./assets/goblin_tower.glb?v=0120',
+    goblin_tent:'./assets/goblin_tent.glb?v=0120',
+    goblin_fence:'./assets/goblin_fence.glb?v=0120',
+    boat:'./assets/boat.glb?v=0120',palm:'./assets/palm.glb?v=0120',
+    pine:'./assets/pine.glb?v=0120',tree:'./assets/tree.glb?v=0120',
+    rock_mid:'./assets/rock_mid.glb?v=0120',
+    bow:'./assets/bow.glb?v=0120',dagger:'./assets/dagger.glb?v=0120',mace:'./assets/mace.glb?v=0120'
   };
   // [modello, posizione X/Y/Z, altezza, rotazione Y]
   // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
@@ -810,22 +882,20 @@ function init(){
   // torri agli angoli, tende a lati del focolare, palizzate sul perimetro.
   // La roccaforte chiusa è scenografia di fondo per l'arena più ampia.
   const environmentSlots=[
-    ['fort_open',[16,0,-14.8],5.25,0],
-    ['fort_closed',[22,0,-34],8.5,.0],
-    ['goblin_tower',[9.4,0,-14.1],4.1,.15],
-    ['goblin_tower',[22.6,0,-14.1],4.1,-.15],
-    ['goblin_tower',[9.4,0,-2.7],3.9,.10],
-    ['goblin_tower',[22.6,0,-2.7],3.9,-.10],
-    ['goblin_tent',[12.0,0,-8.0],2.45,.55],
-    ['goblin_tent',[20.0,0,-8.0],2.45,-.55],
-    ['goblin_tent',[12.0,0,-4.8],2.0,1.2],
-    ['goblin_tent',[20.0,0,-4.8],2.0,-1.2],
-    ['goblin_fence',[9.5,0,-8.8],2.15,Math.PI/2],
-    ['goblin_fence',[22.5,0,-8.8],2.15,Math.PI/2],
-    ['goblin_fence',[12.0,0,-2.3],2.15,0],
-    ['goblin_fence',[20.0,0,-2.3],2.15,0],
-    ['goblin_fence',[11.4,0,-15.4],2.15,0],
-    ['goblin_fence',[20.6,0,-15.4],2.15,0],
+    // Pianta leggibile: ingresso a sud, piazza/fuoco al centro,
+    // tende simmetriche a est/ovest, torri ai lati del portale,
+    // recinzione perimetrale con varco centrale libero.
+    ['fort_open',[16,0,-14.5],5.8,0],
+    // La fortezza chiusa è oltre l'arena, NON nel centro di combattimento.
+    ['fort_closed',[22,0,-51],6.0,0],
+    ['goblin_tower',[9.4,0,-13.4],3.5,.08],
+    ['goblin_tower',[22.6,0,-13.4],3.5,-.08],
+    ['goblin_tent',[11.6,0,-7.5],2.05,.12],
+    ['goblin_tent',[20.4,0,-7.5],2.05,-.12],
+    ['goblin_fence',[9.0,0,-6.6],2.15,Math.PI/2],
+    ['goblin_fence',[23.0,0,-6.6],2.15,Math.PI/2],
+    ['goblin_fence',[11.4,0,-2.5],2.15,0],
+    ['goblin_fence',[20.6,0,-2.5],2.15,0],
     ['rock_mid',[-13.8,0,7.1],0.58,0.3],
     ['rock_mid',[-7.2,0,6.8],0.48,2.1],
     ['rock_mid',[-7.7,0,11.7],0.37,1.1],
@@ -973,7 +1043,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0110',goblin:'./goblin-ottimizzato.glb?v=0110',boss:'./assets/boss.glb?v=0110'};
+    const paths={slime:'./slime-verde.glb?v=0120',goblin:'./goblin-ottimizzato.glb?v=0120',boss:'./assets/boss.glb?v=0120'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -1187,7 +1257,7 @@ function init(){
     }
     gainXp(kind==='goblin'?20:12);
     if(stage===1&&kills>=5){
-      stage=2;const boss=bossGoblin(22,-28,89);enemies.push(boss);
+      stage=2;const boss=bossGoblin(22,-27,89);enemies.push(boss);
       // Il boss arriva dopo i cinque nemici iniziali.
       toast('BOSS GOBLIN! SEGUI IL SENTIERO VERSO SUD-EST!',5);updateHud();
     }
@@ -1210,11 +1280,13 @@ function init(){
       state='lost';showDialog('LA SCINTILLA SI È SPENTA','Hai raccolto <b>'+coins+' monete</b> e raggiunto il livello <b>'+level+'</b>. Riprova e scegli potenziamenti diversi.','RIPROVA');
     }
   }
+  let normalCameraSpan=8.5;
   function resize(){
     const w=window.innerWidth,h=window.innerHeight;
     renderer.setSize(w,h,false);
     // Area visibile costante in altezza per far risaltare davvero il personaggio 3D.
-    const span=h<450?8.2:8.5;
+    normalCameraSpan=h<450?8.2:8.5;
+    const span=normalCameraSpan;
     camera.top=span;camera.bottom=-span;camera.right=span*w/h;camera.left=-camera.right;camera.updateProjectionMatrix();
   }
   window.addEventListener('resize',resize);resize();
@@ -1224,7 +1296,7 @@ function init(){
   function updateMiniMap(dt){
     miniClock+=dt;if(!miniCtx||miniClock<.18)return;miniClock=0;
     const c=miniCtx,W=c.canvas.width,H=c.canvas.height;
-    const mapX=x=>(x+43)/86*W,mapY=z=>(z+43)/86*H;
+    const mapX=x=>(x+45)/90*W,mapY=z=>(z+62)/110*H;
     c.clearRect(0,0,W,H);c.fillStyle='#a7c393';c.fillRect(0,0,W,H);
     // Piccoli gruppi di alberi: indizi geografici, non una seconda scena 3D.
     c.fillStyle='#679d73';for(let i=0;i<60;i++){
@@ -1242,7 +1314,7 @@ function init(){
     }c.stroke();
     c.fillStyle='#9b7050';c.fillRect(mapX(16)-10,mapY(-9)-8,20,16);
     c.strokeStyle='#624d37';c.lineWidth=2;c.strokeRect(mapX(16)-10,mapY(-9)-8,20,16);
-    c.fillStyle='#988c7a';c.beginPath();c.ellipse(mapX(22),mapY(-28),13,12,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#988c7a';c.beginPath();c.ellipse(mapX(22),mapY(-27),20,17,0,0,Math.PI*2);c.fill();
     c.strokeStyle='#e2c99c';c.lineWidth=2;c.stroke();
     c.fillStyle='#e9d4a7';c.beginPath();c.ellipse(mapX(-20),mapY(14),13,12,0,0,Math.PI*2);c.fill();
     c.fillStyle='#e3caa0';c.fillRect(mapX(4.5)-6,mapY(.7)-3,12,6);
@@ -1251,7 +1323,7 @@ function init(){
     const px=mapX(hero.root.position.x),py=mapY(hero.root.position.z);
     c.fillStyle='#fff4c8';c.strokeStyle='#215e91';c.lineWidth=2.3;c.beginPath();c.arc(px,py,4.3,0,Math.PI*2);c.fill();c.stroke();
     let region='BOSCO DEL RISVEGLIO';
-    if(Math.hypot(hero.root.position.x-22,hero.root.position.z+28)<12)region='ARENA DEL BOSS GOBLIN';
+    if(Math.hypot(hero.root.position.x-22,hero.root.position.z+27)<17)region='ARENA DEL BOSS GOBLIN';
     else if(Math.hypot(hero.root.position.x-16,hero.root.position.z+9)<8)region='AVAMPOSTO GOBLIN';
     else if(Math.hypot(hero.root.position.x-9,hero.root.position.z-1.45)<4)region='ROVINE DEL CRISTALLO';
     else if(hero.root.position.x< -15&&hero.root.position.z>5)region='SPIAGGIA DEL NAUFRAGIO';
@@ -1261,10 +1333,21 @@ function init(){
     else if(Math.abs(hero.root.position.x-(4.1+.83*Math.sin(hero.root.position.z*.19+.3)+.28*Math.sin(hero.root.position.z*.43)))<3)region='FIUME DELLE SCINTILLE';
     if(region!==lastRegion){$('#region-name').textContent=region;lastRegion=region;}
   }
+  // FPS mobile: riduce la risoluzione interna solo se gli scatti persistono.
+  let fpsFrames=0,fpsAccum=0,fpsWindow=0;
+  function adaptResolution(dt){
+    if(!mobileDevice||dt<=0)return;
+    fpsFrames++;fpsAccum+=dt;fpsWindow+=dt;
+    if(fpsWindow<5)return;
+    const fps=fpsFrames/Math.max(.001,fpsAccum);
+    const target=fps<26?Math.max(.70,qualityScale-.12):fps>52?Math.min(1,qualityScale+.08):qualityScale;
+    if(Math.abs(target-qualityScale)>.03){qualityScale=target;renderer.setPixelRatio(qualityScale);}
+    fpsFrames=0;fpsAccum=0;fpsWindow=0;
+  }
   const camLook=new V();
   const zero=new V();
   function tick(){
-    requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.045);elapsed+=dt;
+    requestAnimationFrame(tick);const dt=Math.min(clock.getDelta(),.045);elapsed+=dt;adaptResolution(dt);
     // L'ambiente è vivo anche quando è aperto il menu.
     // Gli alberi GLB rimangono statici per limitare il carico GPU su iPhone.
     for(const [i,r] of ripples.entries()){
@@ -1284,7 +1367,7 @@ function init(){
         // Asse del joystick allineato alla telecamera isometrica.
         const vx=(mx+my)*Math.SQRT1_2,vz=(my-mx)*Math.SQRT1_2;
         hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x+vx*moveSpeed*dt*strength,-40,40);
-        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z+vz*moveSpeed*dt*strength,-42,42);
+        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z+vz*moveSpeed*dt*strength,-57,42);
         facing.set(vx,0,vz);hero.motion.position.y=.045+Math.sin(elapsed*13)*.04;
         hero.legs[0].rotation.x=Math.sin(elapsed*12)*.20;
         hero.legs[1].rotation.x=-hero.legs[0].rotation.x;
@@ -1363,6 +1446,17 @@ function init(){
     const desired=target.clone().add(cameraOffset);
     camera.position.lerp(desired,Math.min(1,dt*5.0));
     camLook.lerp(target,Math.min(1,dt*6));camera.lookAt(camLook);
+    // L'arena del Boss occupa ~33 metri: quando ci si avvicina la
+    // telecamera si allarga gradualmente per mostrarne l'estensione.
+    const arenaDistance=Math.hypot(hero.root.position.x-22,hero.root.position.z+27);
+    const arenaBlend=1-THREE.MathUtils.smoothstep(arenaDistance,13,26);
+    const spanTarget=THREE.MathUtils.lerp(normalCameraSpan,17.5,arenaBlend);
+    const nextSpan=THREE.MathUtils.lerp(camera.top,spanTarget,Math.min(1,dt*2.2));
+    if(Math.abs(nextSpan-camera.top)>.001){
+      camera.top=nextSpan;camera.bottom=-nextSpan;
+      camera.right=nextSpan*window.innerWidth/window.innerHeight;
+      camera.left=-camera.right;camera.updateProjectionMatrix();
+    }
     if(shake>0){shake-=dt;camera.position.x+=(rand(elapsed*246)-.5)*shake*.12}
     renderer.render(scene,camera);
   }
@@ -1370,5 +1464,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0110').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0120').catch(()=>{});
 }

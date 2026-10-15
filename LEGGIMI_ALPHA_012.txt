@@ -1,0 +1,24 @@
+THE FIRST SPARK — ALPHA 0.12
+====================================
+CAMBIAMENTI
+- Caricamento iniziale minimo 30 secondi (invece di 60), con progresso reale dei file.
+- Mantenuto il gioco in orizzontale.
+- Zona Goblin ridisegnata: ingresso, due torri, due tende, quattro palizzate, piazza con falò.
+- 5 strutture Goblin in versione low-poly e texture 512px: circa 70.000 triangoli totali dei 5 asset di riferimento (prima circa 396.000).
+- Arena Boss ampliata a circa 33 metri; roccaforte chiusa spostata dietro l'arena, non al centro.
+- Zoom automatico della telecamera quando il personaggio raggiunge l'arena.
+- Erba 3D di 1 cm e tappeto di dettaglio erboso sul terreno delle aree boschive.
+- Fiume: strisce di schiuma in movimento, texture più visibile, onde aggiornate a 12 FPS.
+- Laghetto: onde più evidenti e cerchi concentrici in espansione.
+- Risoluzione interna adattiva su dispositivi mobili in caso di FPS bassi.
+- Aggiornata cache e versioni delle risorse a 0120.
+
+LIMITI
+- Questa versione non è stata provata su un iPhone fisico; verifica visivamente l'orientamento e la qualità UV dei GLB ridotti.
+- Collisioni degli edifici ancora da implementare.
+- Non tutti i dispositivi permettono di forzare la rotazione: appare un avviso per ruotare il telefono.
+
+INSTALLAZIONE
+1. Estrai lo ZIP e sostituisci TUTTI i file della root del repository GitHub, comprese le cartelle assets e icons.
+2. Pubblica con GitHub Pages e verifica la dicitura ALPHA 0.12.
+3. Se l'iPhone mostra la vecchia versione, chiudi l'app web e cancella i dati del sito.
