@@ -1,0 +1,37 @@
+THE FIRST SPARK — ALPHA 0.9 | PRIMA ISOLA / AMBIENTAZIONE 3D
+============================================================
+
+NOVITÀ
+- Spiaggia sabbiosa occidentale, battigia e mare; barca 3D arenata.
+- La partita inizia sulla spiaggia, con un sentiero che porta alla foresta e al campo goblin.
+- Vecchi alberi procedurali rimossi. Sostituiti con GLB di palma, pino e latifoglia.
+- Tre zone ambientali: spiaggia tropicale, pineta nord-ovest, bosco di latifoglie a sud-est.
+- Erba 3D bassa con geometrie instanziate, texture terreno più dettagliata.
+- Laghetto con sponde stratificate, acqua più definita, riflessi, rocce e canne.
+- GLB aggiunti: roccaforte aperta V1, roccaforte chiusa V2, tenda, torre, palizzata.
+- Roccaforte V1 al campo goblin; V2 all'area Boss (a sud).
+- Boss Goblin: risolto l'accumulo di scala al colpo (il corpo non deve più allungarsi).
+- Frecce fuoco: bruciatura ridotta a un singolo tick e senza sovrapposizione.
+- Potenziamenti, esperienza, nemici e armi mantenuti dalla Alpha 0.8.
+- Aggiornata la cache PWA a 0900 per caricare i nuovi file.
+
+NOTE TECNICHE
+- Sono stati riutilizzati i GLB Mobile ottimizzati; niente download multipli per
+  copie dello stesso oggetto: Three.js condivide geometrie e texture delle istanze.
+- I nuovi modelli sono caricati progressivamente DOPO i personaggi essenziali.
+  Alcuni oggetti possono apparire alcuni secondi dopo l'inizio della partita.
+- La roccaforte aperta sostituisce gli edifici segnaposto solo quando è pronta.
+- Collisioni degli edifici ancora da implementare.
+- Nessuna animazione scheletrica; non è stata fatta una prova su iPhone reale.
+- La resa grafica dei modelli e il posizionamento sono da verificare in gioco.
+
+INSTALLAZIONE GITHUB PAGES
+1. Estrai il file ZIP.
+2. Carica tutti i file nella root del repository (non solo index.html).
+3. Sostituisci l'intera cartella assets/ con i nuovi file (inclusi i 5 nuovi GLB).
+4. Mantieni la cartella icons/; sostituisci game.js, style.css, sw.js e manifest.
+5. Attendi la pubblicazione GitHub Pages; ricarica la pagina sul telefono.
+6. Se compare ancora la vecchia versione, chiudi la web app e svuota i dati del sito.
+
+VERIFICA
+Controllare soprattutto l'accesso all'area Boss, colori delle strutture e fluidità.

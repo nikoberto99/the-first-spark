@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.8 | Mondo 3D Esplorabile
+/* THE FIRST SPARK — Alpha 0.9 | Isola dei Goblin e biomi
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -78,15 +78,15 @@ function init(){
   }
   // Texture erbosa naturale: evita il pavimento piatto e gli artefatti a triangoli.
   function grassTexture(){
-    const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');
-    ctx.fillStyle='#b4cda0';ctx.fillRect(0,0,256,256);
-    for(let i=0;i<5300;i++){
-      const xx=rand(i*1.37+11)*256, yy=rand(i*9.71+33)*256;
+    const c=document.createElement('canvas');c.width=c.height=512;const ctx=c.getContext('2d');
+    ctx.fillStyle='#b4cda0';ctx.fillRect(0,0,512,512);
+    for(let i=0;i<12000;i++){
+      const xx=rand(i*1.37+11)*512, yy=rand(i*9.71+33)*512;
       ctx.fillStyle=['#b2d09f','#aac49c','#c3d6a9','#a0c294','#d0d9b4'][i%5];
       ctx.globalAlpha=.12+rand(i+70)*.28;ctx.beginPath();ctx.ellipse(xx,yy,1.1+rand(i*3)*2.5,.5+rand(i*7)*1.2,rand(i)*6.28,0,6.283);ctx.fill();
     }
     ctx.globalAlpha=1;const t=new THREE.CanvasTexture(c);
-    t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(8,8);t.colorSpace=THREE.SRGBColorSpace;
+    t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(9,9);t.colorSpace=THREE.SRGBColorSpace;
     t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;
   }
   function rand(n){const v=Math.sin(n*128.237+12.4)*43758.5453;return v-Math.floor(v)}
@@ -113,10 +113,56 @@ function init(){
     mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}),world,[0,0,0],[1,1,1],false);
   }
   pathSurface();
+  // Sentiero secondario: dall'approdo sulla spiaggia al percorso centrale.
+  const arrivalPath=new THREE.CatmullRomCurve3([
+    new V(-18.1,0,13.3),new V(-16.1,0,9.7),
+    new V(-14.6,0,5.8),new V(-11.6,0,2.8),new V(-9.0,0,.8)
+  ],false,'catmullrom',.45);
+  const beachTrailPositions=[],beachTrailIndices=[];
+  for(let i=0;i<=80;i++){
+    const t=i/80,p=arrivalPath.getPoint(t),d=arrivalPath.getTangent(t);
+    const nx=-d.z,nz=d.x,w=.82+.09*Math.sin(t*18);
+    beachTrailPositions.push(p.x-nx*w,.008,p.z-nz*w,p.x+nx*w,.008,p.z+nz*w);
+    if(i<80){const k=i*2;beachTrailIndices.push(k,k+2,k+1,k+1,k+2,k+3);}
+  }
+  const arrivalGeo=new THREE.BufferGeometry();
+  arrivalGeo.setAttribute('position',new THREE.Float32BufferAttribute(beachTrailPositions,3));
+  arrivalGeo.setIndex(beachTrailIndices);arrivalGeo.computeVertexNormals();
+  mesh(arrivalGeo,new THREE.MeshStandardMaterial({color:'#d9c29a',roughness:1,side:THREE.DoubleSide}),
+    world,[0,0,0],[1,1,1],false);
   // Laghetto laterale con sponda e morbidi riflessi.
   const pond=new THREE.Group();pond.position.set(-10,0,9);world.add(pond);
   function flatEllipse(parent,material,radx,radz,y){const s=mesh(new THREE.CircleGeometry(1,60),material,parent,[0,y,0],[radx,radz,1],false);s.rotation.x=-Math.PI/2;return s}
-  flatEllipse(pond,mat('#d3c8ac'),3.8,2.5,.012);flatEllipse(pond,m.water,3.45,2.2,.025);
+  // Sponda stratificata e acqua più profonda: il laghetto ora è distinto
+  // dalla costa marina e dal fiume.
+  flatEllipse(pond,mat('#8a9f82'),4.12,2.79,-.004);
+  flatEllipse(pond,mat('#d9c9a4'),3.86,2.54,.010);
+  flatEllipse(pond,mat('#327c85',.22,{transparent:true,opacity:.96,depthWrite:false}),3.55,2.26,.021);
+  flatEllipse(pond,mat('#73bdc0',.25,{transparent:true,opacity:.72,depthWrite:false}),3.31,2.08,.027);
+  const pondFoam=mesh(new THREE.RingGeometry(.93,1.01,90),
+    new THREE.MeshBasicMaterial({color:'#e2fff2',transparent:true,opacity:.26,side:THREE.DoubleSide,depthWrite:false}),
+    pond,[0,.033,0],[3.50,2.22,1],false);
+  pondFoam.rotation.x=-Math.PI/2;
+  const pondHighlights=[];
+  for(let i=0;i<17;i++){
+    const x=(rand(i*11+61)-.5)*5.8,z=(rand(i*23+70)-.5)*3.3;
+    const h=mesh(new THREE.PlaneGeometry(.24+rand(i)*.27,.022),
+      new THREE.MeshBasicMaterial({color:'#e8fffa',transparent:true,opacity:.20,depthWrite:false,side:THREE.DoubleSide}),
+      pond,[x,.040,z],[1,1,1],false);
+    h.rotation.x=-Math.PI/2;pondHighlights.push(h);
+  }
+  for(let i=0;i<31;i++){
+    const a=i*2.39996,rad=1+.08*Math.sin(i*5);
+    const x=Math.cos(a)*3.77*rad,z=Math.sin(a)*2.44*rad;
+    if(i%3===0){
+      const reed=mesh(new THREE.ConeGeometry(.065,.31,4),
+        mat('#81a875'),pond,[x,.17,z],[1,1,1],false);
+      reed.rotation.z=.15*Math.sin(i*2);
+    }else{
+      ball(pond,i%2?m.rock:m.rock2,[x,.055,z],
+        [.16+rand(i)*.13,.09+rand(i+9)*.08,.13+rand(i+3)*.11],true,false);
+    }
+  }
   const ripples=[];
   for(let i=0;i<4;i++){
     const ring=mesh(new THREE.RingGeometry(.18+i*.37,.205+i*.37,56),new THREE.MeshBasicMaterial({color:'#d1f5eb',transparent:true,opacity:.19,side:THREE.DoubleSide,depthWrite:false}),pond,[-.8,.03,.3],[1,.72,1],false);
@@ -138,30 +184,10 @@ function init(){
     g.computeVertexNormals();return mesh(g,seed%2?m.rock:m.rock2,world,[x,.17*r,z],[r*1.25,r*.5,r*.95]);
   }
   // Alberi fiabeschi: tronco curvo, chiome tonde continue e sfumature naturali.
+  // Alpha 0.9: eliminati gli alberi procedurali della vecchia versione.
+  // Le chiome sono ora esclusivamente quelle dei modelli Meshy (pini,
+  // latifoglie e palme), organizzate in tre biomi separati.
   const trees=[];
-  function tree(x,z,s,seed){
-    const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(s);world.add(g);trees.push(g);
-    circularShadow(g,0,0,1.3,.15);
-    curveTube(g,m.bark,[[0,.06,0],[.05,.56,0],[.1,1.22,.03],[.02,1.75,.05]],.18,17);
-    stick(g,m.bark,[.07,1.1,0],[.6,1.92,.08],.09,.07);
-    stick(g,m.bark,[0,1.42,0],[-.53,2.12,-.12],.09,.065);
-    const colors=[m.leaf,m.leafLight,m.leafDark,m.leafGold,m.leaf];
-    const lumps=[[-.56,2.2,.0,.88,.7,.73],[.55,2.26,-.07,.84,.82,.78],[0,2.63,-.05,1.02,.82,.86],[-.28,2.16,.61,.7,.6,.64],[.45,2.25,.53,.67,.59,.68],[.03,2.06,-.54,.85,.71,.73]];
-    for(let j=0;j<lumps.length;j++){
-      const [lx,ly,lz,sx,sy,sz]=lumps[j];
-      ball(g,colors[(j+(seed|0))%colors.length],[lx,ly+(rand(seed+j)-.5)*.13,lz],[sx,sy,sz],false,false);
-    }
-    return g;
-  }
-  for(let i=0;i<57;i++){
-    const x=(rand(i*7+6)-.5)*58,z=(rand(i*13+26)-.5)*54;
-    const nearest=pathPts.reduce((min,_,n)=>{
-      if(n===0)return min;
-      const a=pathPts[n-1],b=pathPts[n],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz))),d=Math.hypot(x-(a[0]+dx*t),z-(a[1]+dz*t));return Math.min(min,d);
-    },99);
-    if(nearest<2.8||Math.hypot(x+10,z-9)<5||Math.hypot(x+6,z-.7)<4.8||Math.hypot(x-8,z-2)<4.0||Math.hypot(x-16,z+9)<8.2)continue;
-    tree(x,z,.81+rand(i+402)*.63,i);
-  }
   // Presenze piccole e colorate nel sottobosco.
   function mushroom(x,z,s,color){
     stick(world,m.cream,[x,.07*s,z],[x,.39*s,z],.075*s,.062*s,10);
@@ -169,14 +195,58 @@ function init(){
     const collar=ball(world,m.white,[x,.35*s,z],[.22*s,.05*s,.22*s],true,false);return [cap,collar];
   }
   const petals=new THREE.InstancedMesh(new THREE.SphereGeometry(1,7,5),m.flowerYellow,175);
-  const grassStems=new THREE.InstancedMesh(new THREE.ConeGeometry(.04,.28,5),mat('#77b985'),420);
-  const inst=new THREE.Object3D();
-  for(let i=0;i<420;i++){
-    const x=(rand(i*17+100)-.5)*48,z=(rand(i*31+114)-.5)*48;
-    inst.position.set(x,.11,z);inst.rotation.set(0,rand(i)*Math.PI*2,(rand(i+48)-.5)*.42);const s=.63+rand(i*12)*1.4;
-    inst.scale.set(s,s,s);inst.updateMatrix();grassStems.setMatrixAt(i,inst.matrix);
+  // Erba bassa tridimensionale: ciuffi a tre lame, instanziati in una sola
+  // draw call per variante. Non interferiscono con sentieri, spiaggia o acqua.
+  const grassShape=new THREE.BufferGeometry();
+  const grassVertices=[];
+  for(let blade=0;blade<3;blade++){
+    const a=blade*Math.PI/3,dx=Math.cos(a)*.060,dz=Math.sin(a)*.060;
+    grassVertices.push(-dx,0,-dz, dx,0,dz, Math.sin(a)*.035,.22,Math.cos(a)*.035);
   }
-  grassStems.castShadow=false;grassStems.receiveShadow=false;world.add(grassStems);
+  grassShape.setAttribute('position',new THREE.Float32BufferAttribute(grassVertices,3));
+  grassShape.computeVertexNormals();
+  const grassColors=['#83b877','#9cc785','#72aa71'];
+  const inst=new THREE.Object3D();
+  function nearPath(x,z){
+    for(let j=1;j<pathPts.length;j++){
+      const a=pathPts[j-1],b=pathPts[j],dx=b[0]-a[0],dz=b[1]-a[1];
+      const t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));
+      if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<1.65)return true;
+    }
+    return false;
+  }
+  function validGrass(x,z){
+    const riverX=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+    return !(x< -15&&z>5) &&
+      !(x< -11&&x> -19&&z>1&&z<14) &&
+      Math.hypot((x+10)/4.2,(z-9)/3.1)>1.12 &&
+      Math.abs(x-riverX)>2.3 &&
+      Math.hypot((x-16)/7.2,(z+9)/6.3)>1 &&
+      Math.hypot((x-16)/6,(z+19)/7)>1 &&
+      Math.hypot((x-9)/3.5,(z-1.45)/3.5)>1 &&
+      !nearPath(x,z);
+  }
+  for(let layer=0;layer<3;layer++){
+    const count=680,tufts=new THREE.InstancedMesh(grassShape,
+      new THREE.MeshStandardMaterial({color:grassColors[layer],roughness:1,side:THREE.DoubleSide}),count);
+    let placed=0;
+    for(let k=0;k<5000&&placed<count;k++){
+      const x=(rand(k*19+layer*500+101)-.5)*58;
+      const z=(rand(k*37+layer*800+305)-.5)*55;
+      if(!validGrass(x,z))continue;
+      const h=.55+rand(k*7+layer)*.65;
+      inst.position.set(x,.02,z);
+      inst.rotation.set(0,rand(k+layer*77)*6.283,0);
+      inst.scale.set(h,h,h);inst.updateMatrix();
+      tufts.setMatrixAt(placed++,inst.matrix);
+    }
+    for(let k=placed;k<count;k++){
+      inst.position.set(0,-10,0);inst.scale.set(0,0,0);inst.updateMatrix();
+      tufts.setMatrixAt(k,inst.matrix);
+    }
+    tufts.instanceMatrix.needsUpdate=true;tufts.castShadow=false;tufts.receiveShadow=false;
+    world.add(tufts);
+  }
   for(let i=0;i<175;i++){
     const x=(rand(i*19+601)-.5)*40,z=(rand(i*33+809)-.5)*40;
     inst.position.set(x,.13,z);inst.rotation.set(0,0,0);const s=.06+rand(i)*.045;inst.scale.set(s,s*.55,s);inst.updateMatrix();petals.setMatrixAt(i,inst.matrix);
@@ -207,7 +277,7 @@ function init(){
   // ALPHA 0.8 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
   // Gli elementi architettonici goblin sono segnaposto originali e modulari:
   // potranno essere sostituiti dai futuri GLB senza toccare il gameplay.
-  const env=new THREE.Group();env.name='Ambiente_Alpha_08';world.add(env);
+  const env=new THREE.Group();env.name='Ambiente_Alpha_09';world.add(env);
   const em={
     earth:mat('#7f9870'),earthLight:mat('#91a77a'),sand:mat('#d8c39c'),
     moss:mat('#719774'),mossLight:mat('#a5c58d'),darkStone:mat('#7d8d83'),
@@ -239,6 +309,44 @@ function init(){
   terrainPatch(-10,9,6.4,5.4,em.sand,3,-.050);
   terrainPatch(9,1.4,4.4,4.0,em.moss,4,-.052);
   terrainPatch(-18,-14,5.5,4.4,em.earth,5,-.054);
+  // Spiaggia vera, separata dal laghetto: sabbia calda, battigia e mare
+  // sulla costa occidentale. La barca GLB sarà arenata sulla sabbia.
+  terrainPatch(-20,14,10.6,11.2,mat('#e9d4a7'),17,-.049);
+  terrainPatch(-20.8,15.0,8.1,9.3,mat('#efdcb6'),29,-.046);
+  const coast=new THREE.Group();coast.name='Spiaggia_e_mare';env.add(coast);
+  function coastalStrip(innerOffset,outerOffset,y,material){
+    const p=[],uv=[],ind=[],n=78;
+    for(let i=0;i<=n;i++){
+      const z=3+i*27/n,edge=-23.6+.55*Math.sin(z*.42)+.18*Math.cos(z*.85);
+      p.push(edge+innerOffset,y,z,edge+outerOffset,y,z);
+      uv.push(i/n,0,i/n,1);
+      if(i<n){const k=i*2;ind.push(k,k+1,k+2,k+1,k+3,k+2);}
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+    g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+    g.setIndex(ind);g.computeVertexNormals();
+    return mesh(g,material,coast,[0,0,0],[1,1,1],false);
+  }
+  coastalStrip(-15,.0,-.024,mat('#368e9d',.31,{transparent:true,opacity:.97,side:THREE.DoubleSide,depthWrite:false}));
+  coastalStrip(-.7,.0,-.012,mat('#8ccdc4',.34,{transparent:true,opacity:.80,side:THREE.DoubleSide,depthWrite:false}));
+  coastalStrip(0,.28,-.008,mat('#f8e9c8',.7,{transparent:true,opacity:.65,side:THREE.DoubleSide,depthWrite:false}));
+  const shoreFoam=[];
+  for(let i=0;i<21;i++){
+    const z=4+i*1.20,edge=-23.6+.55*Math.sin(z*.42)+.18*Math.cos(z*.85);
+    const foam=mesh(new THREE.PlaneGeometry(.22,.55),
+      new THREE.MeshBasicMaterial({color:'#eafff8',transparent:true,opacity:.37,depthWrite:false,side:THREE.DoubleSide}),
+      coast,[edge-.24,-.002,z],[1,1,1],false);
+    foam.rotation.x=-Math.PI/2;shoreFoam.push(foam);
+  }
+  // Conchiglie e piccoli sassi: dettagli leggeri della spiaggia.
+  for(let i=0;i<34;i++){
+    const x=-22+rand(i*13+9)*6,z=7+rand(i*17+19)*15;
+    const shell=mesh(new THREE.DodecahedronGeometry(.09+rand(i)*.055,0),
+      i%2?em.sand:em.slate,coast,[x,.028,z],[1,.42,.72],false);
+    shell.rotation.y=rand(i*2+4)*6.28;
+  }
+
   // Fiume sinuoso: letto, rive e superficie traslucida. Il sentiero lo attraversa.
   function riverStrip(width,material,y,phase){
     const verts=[],uv=[],idx=[],N=94;
@@ -438,6 +546,9 @@ function init(){
   // Altri elementi di scena sono statici e non modificano collisioni o nemici.
   function animateEnvironment(time){
     for(let i=0;i<riverGlints.length;i++)riverGlints[i].material.opacity=.22+.14*Math.sin(time*1.5+i*.85);
+    for(let i=0;i<pondHighlights.length;i++)pondHighlights[i].material.opacity=.13+.12*Math.sin(time*1.6+i*.9);
+    pondFoam.material.opacity=.21+.06*Math.sin(time*1.3);
+    for(let i=0;i<shoreFoam.length;i++)shoreFoam[i].material.opacity=.22+.15*Math.sin(time*1.7+i*.55);
     for(const f of flames){f.mesh.scale.y=.88+.19*Math.sin(time*9+f.phase);f.mesh.rotation.z=.11*Math.sin(time*6+f.phase)}
     for(const p of fireflies){p.mesh.position.y=p.y+.18*Math.sin(time*1.6+p.phase);p.mesh.position.x=p.x+.13*Math.sin(time*.9+p.phase)}
   }
@@ -486,7 +597,7 @@ function init(){
     stick(bow,m.string,[0,-.43,0],[0,.43,0],.008,.008,5);
     return {root,motion,arms,legs,bow};
   }
-  const hero=heroModel();hero.root.position.set(-6,0,.55);
+  const hero=heroModel();hero.root.position.set(-17.5,0,12.9);
   // Alpha 0.7: il mondo non diventa giocabile finché il protagonista e i
   // nemici iniziali non sono pronti. Gli asset decorativi arrivano dopo.
   let enemyLoader=null;
@@ -535,19 +646,58 @@ function init(){
   }
   // Alpha 0.6: gli oggetti ambientali Meshy sono caricati in sequenza per
   // limitare i picchi di memoria su iPhone. Tutti i GLB restano senza rigging.
+  // GLB originali ottimizzati per iPhone. Un solo download per modello:
+  // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    bow:'./assets/bow.glb',dagger:'./assets/dagger.glb',mace:'./assets/mace.glb',
-    boat:'./assets/boat.glb',pine:'./assets/pine.glb',palm:'./assets/palm.glb',
-    tree:'./assets/tree.glb',rock_big:'./assets/rock_big.glb',
-    rock_mid:'./assets/rock_mid.glb',bridge:'./assets/bridge.glb'
+    fort_open:'./assets/fort_open.glb',
+    fort_closed:'./assets/fort_closed.glb',
+    goblin_tower:'./assets/goblin_tower.glb',
+    goblin_tent:'./assets/goblin_tent.glb',
+    goblin_fence:'./assets/goblin_fence.glb',
+    boat:'./assets/boat.glb',palm:'./assets/palm.glb',
+    pine:'./assets/pine.glb',tree:'./assets/tree.glb',
+    rock_big:'./assets/rock_big.glb',rock_mid:'./assets/rock_mid.glb',
+    bridge:'./assets/bridge.glb',
+    bow:'./assets/bow.glb',dagger:'./assets/dagger.glb',mace:'./assets/mace.glb'
   };
+  // [modello, posizione X/Y/Z, altezza, rotazione Y]
+  // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
   const environmentSlots=[
-    ['pine',[-18,0,-10],5.0,0.2],['pine',[17,0,10],5.5,1.4],
-    ['palm',[-16,0,13],4.4,.6],['palm',[23,0,14],4.8,2.2],
-    ['tree',[-13,0,-15],5.4,0],['tree',[16,0,17],5.1,2.6],
-    ['rock_big',[-5,0,7],1.7,.3],['rock_big',[23,0,-4],2.1,1.1],
-    ['rock_mid',[-7,0,-8],1.1,.4],['rock_mid',[12,0,9],1.3,2.5],
-    ['bridge',[-10,0,5.5],3.7,.25],['boat',[-11,0,10.0],2.8,1.4]
+    ['fort_open',[16,0,-9],5.25,0],
+    ['fort_closed',[16,0,-19],5.05,.20],
+    ['goblin_tower',[10.9,0,-8.6],3.9,.15],
+    ['goblin_tower',[21.3,0,-8.6],3.9,-.24],
+    ['goblin_tent',[13.0,0,-4.2],2.25,.22],
+    ['goblin_tent',[20.2,0,-4.5],2.05,-.65],
+    ['goblin_fence',[11,0,-4.4],2.05,1.52],
+    ['goblin_fence',[21.4,0,-4.3],2.05,1.57],
+    ['goblin_fence',[12,0,-13.2],2.05,.13],
+    ['goblin_fence',[20.1,0,-13.2],2.05,-.12],
+    ['boat',[-20.3,-.14,14.7],1.38,1.05],
+    ['palm',[-18.4,0,18.2],4.45,.25],
+    ['palm',[-15.2,0,16.3],4.75,1.62],
+    ['palm',[-21.7,0,8.4],4.10,2.15],
+    ['palm',[-16.7,0,22.1],4.55,3.10],
+    ['palm',[-19.6,0,6.8],4.25,.77],
+    ['pine',[-21,0,-15],5.4,.22],
+    ['pine',[-15.6,0,-18],5.15,1.12],
+    ['pine',[-9.3,0,-16.2],5.6,2.43],
+    ['pine',[-22,0,-8],4.9,2.88],
+    ['pine',[-14.2,0,-10.2],5.25,.63],
+    ['pine',[-7.2,0,-20],5.15,1.93],
+    ['tree',[14.2,0,16.4],5.2,.35],
+    ['tree',[19.1,0,15.2],5.55,1.7],
+    ['tree',[22.0,0,20.2],5.0,2.6],
+    ['tree',[10.6,0,20.4],4.8,.55],
+    ['tree',[20.2,0,8.7],5.35,1.25],
+    ['tree',[10.5,0,12.4],4.95,3.05],
+    ['rock_big',[-12.5,0,5.0],1.7,.3],
+    ['rock_big',[23,0,-4],2.1,1.1],
+    ['rock_big',[-22.2,0,20.2],1.15,1.9],
+    ['rock_mid',[-7,0,-8],1.1,.4],
+    ['rock_mid',[12,0,9],1.3,2.5],
+    ['rock_mid',[-16.0,0,10.7],.7,.45],
+    ['bridge',[-10,0,5.5],3.7,.25]
   ];
   function normalizeModel(source,targetHeight){
     const box=new THREE.Box3().setFromObject(source),size=box.getSize(new V());
@@ -579,15 +729,21 @@ function init(){
           weaponAssets.mace=scene;
         }
       }else{
-        const heights={pine:5,palm:4.5,tree:4.7,rock_big:1.45,rock_mid:.82,bridge:1.5,boat:1.45};
+        const heights={pine:5.25,palm:4.5,tree:5.1,rock_big:1.45,rock_mid:.82,bridge:1.5,boat:1.38,
+          fort_open:5.25,fort_closed:5.05,goblin_tower:3.9,goblin_tent:2.25,goblin_fence:2.05};
         normalizeModel(scene,heights[key]);
         for(const [name,pos,height,rotation] of environmentSlots){
           if(name!==key)continue;
           const instance=scene.clone(true),holder=new THREE.Group();
           holder.position.set(...pos);holder.rotation.y=rotation;holder.add(instance);
+          if(key==='boat')holder.rotation.z=.105; // barca leggermente inclinata, arenata
+          if(key==='fort_open'||key==='fort_closed'||key.startsWith('goblin_'))holder.name='Roccaforte_Goblin_'+key;
           world.add(holder);
         }
       }
+      // Rimuoviamo i vecchi edifici geometrici solo quando la nuova
+      // roccaforte GLB è realmente visibile (fallback se manca il file).
+      if(key==='fort_open')camp.visible=false;
       loadedAssets.add(key);updateAssetStatus();
     }catch(err){console.warn('Asset facoltativo non caricato:',key,err);failedAssets.add(key);updateAssetStatus();}
   }
@@ -631,7 +787,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb?v=0800',boss:'./assets/boss.glb?v=0800'};
+    const paths={slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb?v=0900',boss:'./assets/boss.glb?v=0900'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -678,7 +834,7 @@ function init(){
     return e;
   }
   const enemies=[];
-  const origins=[[-.6,2.5],[2.8,-2.5],[5.0,3.8],[11.7,-2.1],[14.2,3.3]];
+  const origins=[[-12.5,4.1],[-7.2,2.4],[-.6,2.5],[8.1,-1.9],[13.2,-5.4]];
   origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
   let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0,winTimer=-1;
   let level=1,xp=0,maxHealth=100,damage=1,fireRate=1,moveSpeed=4.15,
@@ -762,7 +918,7 @@ function init(){
     origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
     for(const a of arrows)removeArrow(a);arrows.length=0;
     for(const a of sparks)world.remove(a.mesh);sparks.length=0;
-    hero.root.position.set(-6,0,.55);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
+    hero.root.position.set(-17.5,0,12.9);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
     damage=1;fireRate=1;moveSpeed=4.15;extraArrows=0;pierce=0;regeneration=0;
     stage=1;element='arcana';upgradeQueue=0;Object.keys(upgradeLevels).forEach(k=>delete upgradeLevels[k]);
     $('#upgrade-overlay').classList.remove('visible');refreshElement();
@@ -845,9 +1001,9 @@ function init(){
     }
     gainXp(kind==='goblin'?20:12);
     if(stage===1&&kills>=5){
-      stage=2;const boss=bossGoblin(13.2,0.8,89);enemies.push(boss);
+      stage=2;const boss=bossGoblin(16,-18.4,89);enemies.push(boss);
       // Il boss arriva dopo i cinque nemici iniziali.
-      toast('ATTENZIONE! È ARRIVATO IL BOSS GOBLIN!',3.5);updateHud();
+      toast('BOSS GOBLIN! RAGGIUNGI LA ROCCAFORTE A SUD!',4);updateHud();
     }
   }
   function hurt(e,a){
@@ -855,7 +1011,9 @@ function init(){
     data.hp=Math.max(0,data.hp-damage);data.flash=.16;data.life.visible=true;
     data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
     if(a?.element==='ice')data.slow=Math.max(data.slow||0,2.8);
-    if(a?.element==='fire')data.burn=Math.max(data.burn||0,2.6);
+    // Il fuoco applica una sola bruciatura breve, senza sommare tick
+    // a ogni freccia. Rimane utile ma non elimina il Boss in pochi colpi.
+    if(a?.element==='fire'&&!(data.burn>0)){data.burn=1.65;data.burnTick=0;}
     sparkAt(e.position.clone().add(new V(0,.52,0)),elements[a?.element||'arcana'].color,5);
     if(data.hp<=0)defeated(e);
   }
@@ -906,7 +1064,11 @@ function init(){
     let region='BOSCO DEL RISVEGLIO';
     if(Math.hypot(hero.root.position.x-16,hero.root.position.z+9)<7)region='AVAMPOSTO GOBLIN';
     else if(Math.hypot(hero.root.position.x-9,hero.root.position.z-1.45)<4)region='ROVINE DEL CRISTALLO';
-    else if(Math.hypot(hero.root.position.x+10,hero.root.position.z-9)<6)region='RIVA DEL LAGHETTO';
+    else if(Math.hypot(hero.root.position.x-16,hero.root.position.z+19)<7)region='ARENA DEL BOSS GOBLIN';
+    else if(hero.root.position.x< -15&&hero.root.position.z>5)region='SPIAGGIA DEL NAUFRAGIO';
+    else if(hero.root.position.x< -7&&hero.root.position.z< -8)region='PINETA DEI VENTI';
+    else if(hero.root.position.x>9&&hero.root.position.z>8)region='BOSCO DELLE FOGLIE';
+    else if(Math.hypot(hero.root.position.x+10,hero.root.position.z-9)<6)region='LAGHETTO CRISTALLINO';
     else if(Math.abs(hero.root.position.x-(4.1+.83*Math.sin(hero.root.position.z*.19+.3)+.28*Math.sin(hero.root.position.z*.43)))<3)region='FIUME DELLE SCINTILLE';
     if(region!==lastRegion){$('#region-name').textContent=region;lastRegion=region;}
   }
@@ -951,7 +1113,7 @@ function init(){
         const data=e.userData;
         const dx=hero.root.position.x-e.position.x,dz=hero.root.position.z-e.position.z,d=Math.hypot(dx,dz);
         if(data.burn>0){data.burn-=dt;data.burnTick=(data.burnTick||0)+dt;
-          if(data.burnTick>=.75){data.burnTick=0;data.hp=Math.max(0,data.hp-1);data.life.visible=true;data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
+          if(data.burnTick>=1.3){data.burnTick=0;data.hp=Math.max(0,data.hp-1);data.life.visible=true;data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
             if(data.hp<=0){defeated(e);continue;}}
         }
         data.slow=Math.max(0,(data.slow||0)-dt);
@@ -960,11 +1122,15 @@ function init(){
         if(d<9.5&&d>reach){e.position.x+=dx/d*data.speed*slowFactor*dt;e.position.z+=dz/d*data.speed*slowFactor*dt}
         if(d<reach){data.attack-=dt;if(data.attack<=0){takeDamage(data.kind==='boss'?18:9);data.attack=data.kind==='boss'?1.65:1.28}}
         const b=data.body;
-        b.scale.y=1+(data.kind!=='slime'?.012:.055)*Math.sin(elapsed*6+data.phase);
-        b.scale.x=1-(data.kind!=='slime'?.008:.036)*Math.sin(elapsed*6+data.phase);
+        // Il colpo non moltiplica più la scala a ogni fotogramma:
+        // il Boss torna sempre alle proporzioni originali.
+        const sway=Math.sin(elapsed*6+data.phase);
+        const pulse=data.flash>0?1+.035*Math.min(1,data.flash/.16):1;
+        b.scale.set((1-(data.kind!=='slime'?.008:.036)*sway)*pulse,
+          (1+(data.kind!=='slime'?.012:.055)*sway)*pulse,pulse);
         b.position.y=Math.max(0,Math.sin(elapsed*3+data.phase)*.035);
         b.rotation.y=Math.atan2(dx,dz);
-        if(data.flash>0){data.flash-=dt;b.scale.multiplyScalar(1.006)}
+        if(data.flash>0)data.flash=Math.max(0,data.flash-dt);
         data.life.quaternion.copy(camera.quaternion);
       }
       for(let i=arrows.length-1;i>=0;i--){
@@ -1012,5 +1178,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0800').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0900').catch(()=>{});
 }

@@ -9,8 +9,8 @@
 <link rel="icon" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="stylesheet" href="./style.css?v=0800">
-<title>THE FIRST SPARK — Alpha 0.8 | Mondo 3D Esplorabile</title>
+<link rel="stylesheet" href="./style.css?v=0900">
+<title>THE FIRST SPARK — Alpha 0.9 | Mondo 3D Esplorabile</title>
 </head>
 <body>
 <div id="game" role="application" aria-label="Demo 3D di THE FIRST SPARK"></div>
@@ -18,7 +18,7 @@
 <div id="loading"><div class="load-mark">✦</div><h2>THE FIRST SPARK</h2><p>Il mondo prende vita…</p><small id="load-note">Caricamento del mondo tridimensionale</small></div>
 <div id="hud">
   <header id="top">
-    <div class="title-hud"><div class="game-name">THE FIRST SPARK</div><div class="version">ALPHA 0.8 · MONDO 3D</div><div class="health"><div id="hpbar"></div></div><span id="hptext">100 / 100 HP</span><div class="level-info"><span id="level">Livello 1</span><div class="xp-track"><div id="xpbar"></div></div></div></div>
+    <div class="title-hud"><div class="game-name">THE FIRST SPARK</div><div class="version">ALPHA 0.9 · ISOLA DEI GOBLIN</div><div class="health"><div id="hpbar"></div></div><span id="hptext">100 / 100 HP</span><div class="level-info"><span id="level">Livello 1</span><div class="xp-track"><div id="xpbar"></div></div></div></div>
     <div class="right-hud"><div id="coins">✦ 0 monete</div><div id="kills">Nemici 0 / 5</div><button id="pause" class="pause" aria-label="Pausa">Ⅱ</button></div>
   </header>
   <div id="quest"><span class="quest-icon">✧</span> Foresta Incantata <span class="dot">·</span> <span id="quest-text">Sconfiggi 5 nemici e ottieni potenziamenti</span></div>
@@ -33,14 +33,14 @@
     <div class="portrait"><img src="./icons/personaggio-originale.jpg" alt="Illustrazione originale del giovane mago con cappello blu e arco"></div>
     <h1>THE FIRST SPARK</h1>
     <div class="dialog-version">ALPHA 0.8 · MONDO ESPLORABILE</div>
-    <p id="dialog-text">Esplora un mondo 3D piu ricco: <b>fiume e ponti, boschi, rovine magiche, molo e avamposto goblin</b>. Le strutture goblin sono provvisorie e verranno sostituite dai tuoi futuri GLB.</p>
+    <p id="dialog-text">Esplora un mondo 3D piu ricco: <b>fiume e ponti, boschi, rovine magiche, molo e avamposto goblin</b>. Ora trovi spiaggia e barca arenata, tre biomi con alberi GLB, un laghetto migliorato e due roccaforti Goblin con tende, torri e palizzate.</p>
     <p class="instructions">Esplora la foresta, sconfiggi cinque nemici, <b>scegli i potenziamenti</b> quando sali di livello e affronta il <b>Boss Goblin</b>.</p>
-    <button id="start">ENTRA NELLA FORESTA <span>➜</span></button>
+    <button id="start">ESPLORA LA PRIMA ISOLA <span>➜</span></button>
     <div class="dialog-footer">iPhone: joystick + pulsante arco<br>Computer: WASD / frecce + spazio</div>
   </div>
 </div>
 <div id="upgrade-overlay" role="dialog" aria-modal="true" aria-label="Scegli un potenziamento"><div class="upgrade-window"><div class="upgrade-kicker">✦ LA TUA SCINTILLA CRESCE ✦</div><h2 id="upgrade-title">SCEGLI UN POTENZIAMENTO</h2><p>Il gioco è in pausa finché non scegli.</p><div id="upgrade-panel"></div><small>Su PC puoi premere 1, 2 oppure 3</small></div></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js"}}</script>
-<script type="module" src="./game.js?v=0800"></script>
+<script type="module" src="./game.js?v=0900"></script>
 </body>
 </html>
