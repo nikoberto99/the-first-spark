@@ -24,3 +24,49 @@
 #mini-map{height:124px;width:124px;border-radius:16px;border:2px solid #fff9;background:#b1c99dce;box-shadow:0 6px 18px #102b3280;opacity:.9}
 @media(max-width:560px){#mini-map-wrap{top:max(158px,calc(env(safe-area-inset-top) + 150px));right:8px}#mini-map{width:96px;height:96px}#region-name{font-size:8px;max-width:102px;padding:4px}}
 @media(max-height:500px){#mini-map-wrap{top:86px}#mini-map{width:78px;height:78px}#region-name{font-size:7px}}
+
+/* ALPHA 0.11 — schermata di caricamento illustrata e layout orizzontale */
+#loading{background:#102932;overflow:hidden;padding:0;isolation:isolate}
+.loading-art{position:absolute;inset:-3%;background:url('./icons/cover.jpg') center 42%/cover no-repeat;filter:saturate(1.04) brightness(.72);transform:scale(1.03)}
+.loading-shade{position:absolute;inset:0;background:linear-gradient(90deg,#071b2be8 0%,#092b36c7 45%,#0c223b57 100%)}
+.loading-panel{position:relative;z-index:1;width:min(540px,88vw);margin-right:auto;margin-left:max(5vw,env(safe-area-inset-left));text-align:left;filter:drop-shadow(0 5px 15px #001c2b)}
+.load-kicker{font-size:clamp(9px,1.4vw,13px);color:#f8dca1;font-weight:900;letter-spacing:.23em}
+#loading h2{font-size:clamp(25px,5.5vw,58px);line-height:1.05;letter-spacing:.055em;margin:12px 0 6px;color:#fff5d9;text-shadow:0 3px 14px #0008}
+.load-edition{font-size:clamp(10px,1.7vw,14px);letter-spacing:.17em;color:#ffe1a5;font-weight:900}
+.loading-panel p{font-size:clamp(11px,1.7vw,15px);margin:18px 0 22px;color:#f0f7f6}
+.load-progress-top{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:clamp(10px,1.5vw,13px);font-weight:850;margin-bottom:9px;color:#ecf8f2}
+.load-progress-top strong{color:#ffe4a5;font-size:15px;font-variant-numeric:tabular-nums}
+.load-progress-track{height:16px;width:100%;border:2px solid #ffffffaa;border-radius:99px;background:#031b2dc4;overflow:hidden;box-shadow:0 5px 20px #0006}
+#load-bar{width:0%;height:100%;border-radius:99px;background:linear-gradient(90deg,#77c5bd,#b2e3d0 50%,#ffe6a4);box-shadow:0 0 16px #d5f7d899;transition:width .3s linear}
+#load-clock{margin:10px 0 4px;font-size:12px;font-weight:850;color:#fff0c7}
+#load-note{display:block;margin:0;font-size:11px;color:#e2f0f0;min-height:16px}
+#rotate-screen{display:none;position:fixed;inset:0;z-index:50;background:linear-gradient(150deg,#102c39,#173e49);color:#fff7d7;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:25px}
+.rotate-icon{font-size:74px;line-height:1;color:#ffe0a4;margin-bottom:20px;transform:rotate(-45deg)}
+#rotate-screen strong{font-size:27px;letter-spacing:.04em}
+#rotate-screen p{font-size:14px;line-height:1.6;color:#e4f1ee}
+@media (orientation:portrait) and (pointer:coarse){#rotate-screen{display:flex}}
+@media (orientation:landscape) and (max-height:540px){
+  #top{top:max(5px,env(safe-area-inset-top));left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right))}
+  .game-name{font-size:clamp(13px,2.4vw,19px)}.version{font-size:8px;margin:0 0 4px}
+  .health{height:10px;width:145px}.title-hud #hptext{font-size:9px}
+  .level-info{font-size:9px;margin-top:2px}.xp-track{width:145px;height:5px}
+  .right-hud{font-size:10px;gap:2px}.pause{line-height:23px;font-size:15px}
+  #quest{top:max(9px,env(safe-area-inset-top));left:50%;font-size:10px;max-width:44vw;padding:6px 10px}
+  #mini-map-wrap{top:max(57px,calc(env(safe-area-inset-top) + 53px));right:max(8px,env(safe-area-inset-right))}
+  #mini-map{width:92px;height:92px}#region-name{max-width:98px;font-size:8px;padding:3px}
+  #joy{width:96px;height:96px;bottom:max(14px,env(safe-area-inset-bottom));left:max(18px,env(safe-area-inset-left))}
+  #joy-center{width:38px;height:38px;left:27px;top:27px}
+  #action-wrap{bottom:max(13px,env(safe-area-inset-bottom));right:max(17px,env(safe-area-inset-right))}
+  #fire{height:85px;width:85px;font-size:45px}#element-button{padding:4px 7px;font-size:10px;min-width:80px;margin-bottom:4px}
+  .action-label{font-size:8px;margin-bottom:4px}#toast{bottom:70px;font-size:11px}
+  .dialog-card{width:min(590px,83vw);max-height:94dvh;padding:10px 20px}
+  .portrait{height:66px;width:66px;margin:3px auto}.dialog-card h1{font-size:20px;margin:2px 0}
+  .dialog-card p{font-size:11px;margin:5px auto}.dialog-card .instructions{font-size:10px;margin:4px auto 8px}
+  .dialog-card #start{padding:9px 12px}.dialog-footer{font-size:9px;margin-top:5px}
+  #upgrade-panel{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}
+  .upgrade-card{min-height:112px;display:flex;flex-direction:column;text-align:center;padding:7px}
+  .upgrade-icon{font-size:23px}.upgrade-name{font-size:11px}.upgrade-desc{font-size:10px}
+  .upgrade-window{max-height:94dvh;padding:10px}.upgrade-window h2{font-size:19px}
+  #asset-status{display:none}
+}
+@media (orientation:landscape) and (max-height:390px){.portrait{display:none}.dialog-top{font-size:8px}.dialog-card{padding:8px 18px}.loading-panel p{margin:10px 0}}

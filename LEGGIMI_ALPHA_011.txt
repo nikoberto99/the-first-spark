@@ -1,0 +1,33 @@
+THE FIRST SPARK — ALPHA 0.11 | ISOLA DEI GOBLIN
+
+INSTALLAZIONE (IMPORTANTE: NON CARICARE IL SOLO INDEX.HTML)
+1. Estrai questo ZIP sul computer.
+2. Carica TUTTI i file e le cartelle nella root del repository GitHub.
+3. Sostituisci game.js, index.html, style.css, sw.js, manifest.webmanifest e la cartella assets.
+4. Attendi la pubblicazione su GitHub Pages. Chiudi e riapri la web app iPhone.
+5. Verifica in alto: ALPHA 0.11. Se leggi 0.9/0.10, è la vecchia cache.
+6. Per un controllo ulteriore apri l'indirizzo GitHub Pages in Safari con ?v=0110.
+
+NOVITÀ
+- Schermata illustrata con immagine del gioco e barra reale di caricamento.
+- Tempo minimo di caricamento 60 secondi: anche se i modelli sono pronti prima, aspetta;
+  se impiegano più tempo, la barra aspetta i modelli.
+- Il gioco è progettato in orizzontale. Su iPhone ruotare il dispositivo:
+  Safari non permette di bloccare sempre l'orientamento via codice.
+- Tutti i GLB sono caricati PRIMA di nascondere la schermata iniziale.
+- Barca arenata accanto al punto iniziale sulla spiaggia.
+- Nessun ponte GLB vagante. Rimane il ponte procedurale sul fiume.
+- Rocce medie e piccole dal GLB roccia media, erba alta 1 cm, acqua animata.
+- Campo Goblin organizzato con palizzate perimetrali, tende simmetriche e torri agli angoli.
+- Arena Boss molto più ampia (diametro circa 22 unità), collegata al campo da un sentiero.
+- Boss riposizionato al centro della nuova arena; minimappa e limiti del mondo aggiornati.
+- Tutti i potenziamenti e i nemici delle versioni precedenti conservati.
+
+DA VERIFICARE SU IPHONE
+- L'orientamento orizzontale e le dimensioni dei comandi.
+- Che la barca e le strutture GLB abbiano texture e proporzioni corrette.
+- Il comportamento degli asset in campo: ancora senza collisioni fisiche.
+- Prestazioni GPU, durata caricamento e posizione esatta delle strutture.
+
+VERSIONI
+La Alpha 0.11 NON è la 1.0. La 1.0 arriverà solo a prima isola completa.

@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.10 | Spiaggia, rocce e acqua viva
+/* THE FIRST SPARK — Alpha 0.11 | Spiaggia, rocce e acqua viva
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -90,7 +90,7 @@ function init(){
     t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;
   }
   function rand(n){const v=Math.sin(n*128.237+12.4)*43758.5453;return v-Math.floor(v)}
-  const ground=mesh(new THREE.PlaneGeometry(70,70),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
+  const ground=mesh(new THREE.PlaneGeometry(100,100),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
   ground.rotation.x=-Math.PI/2;
   // Sentiero: UN'UNICA SUPERFICIE CURVA, non piu una fila di dischi sovrapposti.
   const pathPts=[[-22,-1],[-17,-1.1],[-13,-.4],[-9,.8],[-5,1.5],[-1,.5],[3,.35],[7,1.4],[12,1.1],[17,.1],[22,-.7]];
@@ -210,7 +210,7 @@ function init(){
     const pad=flatEllipse(pond,mat('#7bad6d'),.34,.25,.05);pad.position.x=x;pad.position.z=z;
     if(i%2===0){ball(pond,m.flowerYellow,[x,.11,z],[.11,.08,.11],true,false)}
   }
-  // Alpha 0.10: nessuna roccia procedurale: ogni sasso visibile viene
+  // Alpha 0.11: nessuna roccia procedurale: ogni sasso visibile viene
   // dal GLB Roccia_media, scalato in due taglie (media/piccola).
   // Alberi fiabeschi: tronco curvo, chiome tonde continue e sfumature naturali.
   // Alpha 0.9: eliminati gli alberi procedurali della vecchia versione.
@@ -255,15 +255,16 @@ function init(){
       Math.hypot((x+10)/4.2,(z-9)/3.1)>1.12 &&
       Math.abs(x-riverX)>2.3 &&
       Math.hypot((x-16)/7.2,(z+9)/6.3)>1 &&
-      Math.hypot((x-16)/6,(z+19)/7)>1 &&
+      Math.hypot((x-22)/14,(z+28)/13)>1 &&
       Math.hypot((x-9)/3.5,(z-1.45)/3.5)>1 &&
+      !(x>14&&x<25&&z< -12&&z> -27&&Math.abs(x-(16+(z+12)*(-.37)))<2.0) &&
       !nearPath(x,z);
   }
   for(let layer=0;layer<3;layer++){
-    const count=2700,tufts=new THREE.InstancedMesh(grassShape,
+    const count=3600,tufts=new THREE.InstancedMesh(grassShape,
       new THREE.MeshStandardMaterial({color:grassColors[layer],roughness:1,side:THREE.DoubleSide}),count);
     let placed=0;
-    for(let k=0;k<24000&&placed<count;k++){
+    for(let k=0;k<30000&&placed<count;k++){
       const x=(rand(k*19+layer*500+101)-.5)*58;
       const z=(rand(k*37+layer*800+305)-.5)*55;
       if(!validGrass(x,z))continue;
@@ -282,6 +283,9 @@ function init(){
   }
   for(let i=0;i<175;i++){
     const x=(rand(i*19+601)-.5)*40,z=(rand(i*33+809)-.5)*40;
+    if(!validGrass(x,z)){
+      inst.position.set(0,-10,0);inst.scale.set(0,0,0);inst.updateMatrix();petals.setMatrixAt(i,inst.matrix);continue;
+    }
     inst.position.set(x,.13,z);inst.rotation.set(0,0,0);const s=.06+rand(i)*.045;inst.scale.set(s,s*.55,s);inst.updateMatrix();petals.setMatrixAt(i,inst.matrix);
   }
   petals.castShadow=false;world.add(petals);
@@ -302,7 +306,7 @@ function init(){
   const crystalMesh=mesh(new THREE.OctahedronGeometry(.37,0),m.crystal,centerCrystal);
   const glow=new THREE.PointLight('#84efff',0,3.1);glow.position.set(0,.35,0);centerCrystal.add(glow);
   centerCrystal.visible=false;
-  // ALPHA 0.8 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
+  // ALPHA 0.11 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
   // Gli elementi architettonici goblin sono segnaposto originali e modulari:
   // potranno essere sostituiti dai futuri GLB senza toccare il gameplay.
   const env=new THREE.Group();env.name='Ambiente_Alpha_010';world.add(env);
@@ -374,6 +378,42 @@ function init(){
       i%2?em.sand:em.slate,coast,[x,.028,z],[1,.42,.72],false);
     shell.rotation.y=rand(i*2+4)*6.28;
   }
+
+  // Segno dello scafo sulla sabbia; rende riconoscibile il punto d'approdo.
+  terrainPatch(-18.5,15.1,2.35,1.15,mat('#d4b88c'),51,-.025);
+
+  // ALPHA 0.11: ARENA DEL BOSS GRANDE E LEGGIBILE.
+  // 22 metri di diametro, collegata al campo goblin da un sentiero.
+  const bossArena=new THREE.Group();bossArena.name='Arena_del_Boss_Grande';
+  bossArena.position.set(22,0,-28);env.add(bossArena);
+  terrainPatch(22,-28,13.2,12.6,mat('#728d6d'),44,-.041);
+  terrainPatch(22,-28,11.9,11.2,mat('#b7a98c'),45,-.028);
+  terrainPatch(22,-28,10.7,10.0,mat('#9ba88d'),46,-.014);
+  const arenaRing=mesh(new THREE.RingGeometry(10.45,11.10,96),
+    mat('#777e74',.98,{side:THREE.DoubleSide}),bossArena,[0,.016,0],[1,.91,1],false);
+  arenaRing.rotation.x=-Math.PI/2;
+  for(let i=0;i<18;i++){
+    const a=i*Math.PI*2/18;
+    if(a>1.05&&a<2.15)continue; // apertura verso il campo
+    const x=Math.cos(a)*11.1,z=Math.sin(a)*10.2;
+    const stone=mesh(new THREE.CylinderGeometry(.37,.45,.40,7),em.darkStone,bossArena,[x,.16,z],[1,1,1],false);
+    stone.rotation.y=a;
+  }
+  const bossTrailCurve=new THREE.CatmullRomCurve3([
+    new V(16,0,-12.0),new V(17.0,0,-16.0),new V(18.8,0,-19.6),
+    new V(20.8,0,-23.2),new V(22,0,-26.0)
+  ],false,'catmullrom',.48);
+  const btP=[],btI=[];
+  for(let i=0;i<=80;i++){
+    const t=i/80,q=bossTrailCurve.getPoint(t),d=bossTrailCurve.getTangent(t);
+    const nx=-d.z,nz=d.x,w=1.22;
+    btP.push(q.x-nx*w,.012,q.z-nz*w,q.x+nx*w,.012,q.z+nz*w);
+    if(i<80){const j=i*2;btI.push(j,j+2,j+1,j+1,j+2,j+3)}
+  }
+  const btG=new THREE.BufferGeometry();
+  btG.setAttribute('position',new THREE.Float32BufferAttribute(btP,3));
+  btG.setIndex(btI);btG.computeVertexNormals();
+  mesh(btG,mat('#b9a487',1,{side:THREE.DoubleSide}),env,[0,0,0],[1,1,1],false);
 
   // Fiume sinuoso: letto, rive e superficie traslucida. Il sentiero lo attraversa.
   function riverStrip(width,material,y,phase){
@@ -456,7 +496,7 @@ function init(){
   steppingTrail([[-10,5],[-11.4,7],[-12.6,8.6]],21);
   // AVAMPOSTO GOBLIN PROVVISORIO: palizzata, torri, tende, fuoco e bottino.
   // Il centro rimane aperto, con ingresso sul lato nord (verso il sentiero).
-  const camp=new THREE.Group();camp.position.set(16,0,-9);camp.name='Avamposto_goblin_segnaposto';env.add(camp);
+  const camp=new THREE.Group();camp.position.set(16,0,-9);camp.visible=false;camp.name='Avamposto_goblin_segnaposto';env.add(camp);
   function localBox(parent,material,x,y,z,w,h,d){return mesh(new THREE.BoxGeometry(w,h,d),material,parent,[x,y,z]);}
   function pole(parent,a,b,r=.075,material=em.woodDark){return stick(parent,material,a,b,r,r*.86,7)}
   function fenceSegment(parent,x1,z1,x2,z2,n=5){
@@ -539,6 +579,17 @@ function init(){
     }
   }
   firepit(camp,0,-.35,.87);
+  // Falò centrale visibile, anche dopo la sostituzione degli edifici provvisori.
+  const campSquare=new THREE.Group();campSquare.name='Piazza_centrale_goblin';
+  campSquare.position.set(16,0,-8.4);env.add(campSquare);
+  firepit(campSquare,0,0,1.15);
+  for(let i=0;i<4;i++){
+    const a=i*Math.PI/2+.35;
+    const log=mesh(new THREE.CylinderGeometry(.24,.26,.66,9),em.wood,campSquare,
+      [Math.cos(a)*1.65,.26,Math.sin(a)*1.65],[1,1,1],false);
+    log.rotation.z=Math.PI/2;
+  }
+
   for(let i=0;i<4;i++){
     const a=i*Math.PI/2+.5;
     const log=mesh(new THREE.CylinderGeometry(.27,.30,.43,9),em.wood,camp,[Math.cos(a)*1.65,.22,Math.sin(a)*1.65-.4]);log.rotation.z=Math.PI/2;
@@ -590,14 +641,14 @@ function init(){
       for(let i=0;i<a.count;i++){
         const j=i*3,x=base[j],y=base[j+1],z=base[j+2];
         const dy=w.type==='pond'
-          ? .006*Math.sin(x*3.2+time*1.35)*Math.cos(z*3.5-time*.9)
-          : .008*Math.sin(z*2.4-time*3.2+x*2.0)+.003*Math.cos(z*4.0-time*4.3);
+          ? .025*Math.sin(x*2.6+time*1.65)*Math.cos(z*3.0-time*1.1)
+          : .028*Math.sin(z*2.4-time*3.2+x*2.0)+.012*Math.cos(z*4.0-time*4.3);
         a.setY(i,y+dy);
       }
       a.needsUpdate=true;
     }
-    waterPattern.offset.x=time*.012;waterPattern.offset.y=time*.008;
-    riverPattern.offset.x=-time*.048;riverPattern.offset.y=time*.012;
+    waterPattern.offset.x=time*.025;waterPattern.offset.y=time*.017;
+    riverPattern.offset.x=-time*.092;riverPattern.offset.y=time*.025;
     for(let i=0;i<riverGlints.length;i++){
       riverGlints[i].material.opacity=.17+.14*Math.sin(time*1.5+i*.85);
       riverGlints[i].position.z=-25+i*3.1+Math.sin(time*.8+i)*.18;
@@ -653,13 +704,13 @@ function init(){
     stick(bow,m.string,[0,-.43,0],[0,.43,0],.008,.008,5);
     return {root,motion,arms,legs,bow};
   }
-  const hero=heroModel();hero.root.position.set(-17.5,0,12.9);
+  const hero=heroModel();hero.root.position.set(-17.2,0,12.4);
   // Alpha 0.7: il mondo non diventa giocabile finché il protagonista e i
   // nemici iniziali non sono pronti. Gli asset decorativi arrivano dopo.
   let enemyLoader=null;
   let criticalAssetsReady=false;
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0110',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -674,6 +725,25 @@ function init(){
     renderer.compile(scene,camera);
     console.info('Mago ottimizzato pronto');
   }
+  // Barra di caricamento con tempo minimo reale di 60 secondi e progresso
+  // degli asset: non dichiara il 100% finché i file non sono pronti.
+  const MIN_LOADING_MS=60000;
+  const loadStarted=performance.now();
+  let assetsFinished=false, assetsProgress=0, assetsTotal=1;
+  const loadBar=$('#load-bar'),loadPercent=$('#load-percent'),loadClock=$('#load-clock');
+  function updateLoadingUI(){
+    const seconds=(performance.now()-loadStarted)/1000;
+    const timeProgress=Math.min(1,seconds/60);
+    const fileProgress=Math.min(1,assetsProgress/assetsTotal);
+    const pct=Math.round(Math.min(timeProgress,fileProgress)*100);
+    if(loadBar)loadBar.style.width=pct+'%';
+    if(loadPercent)loadPercent.textContent=pct+'%';
+    if(loadClock)loadClock.textContent=assetsFinished&&seconds<60
+      ?'Preparazione del mondo · '+Math.ceil(60-seconds)+' s'
+      :assetsFinished?'Tutto pronto!':'Modelli caricati '+assetsProgress+' / '+assetsTotal;
+    if(!loading.classList.contains('hide'))requestAnimationFrame(updateLoadingUI);
+  }
+  requestAnimationFrame(updateLoadingUI);
   async function initializeModels(){
     try{
       hint.textContent='Preparazione del motore 3D…';
@@ -681,22 +751,41 @@ function init(){
       try{module=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
       catch(_){module=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
       const loader=new module.GLTFLoader();enemyLoader=loader;
-      hint.textContent='Caricamento del mago e della barca…';
-      await Promise.all([loadHeroModel(loader),loadOneAsset(loader,'boat')]);
-      hint.textContent='Preparazione di Goblin e Slime…';
-      const ready=await Promise.allSettled([loadEnemyModel('slime'),loadEnemyModel('goblin')]);
-      const failures=ready.filter(r=>r.status==='rejected');
-      if(failures.length)console.warn('Alcuni nemici usano il modello provvisorio',failures);
+      assetsTotal=4+Object.keys(modelSources).length; // mago, slime, goblin, boss + ambientazione
+      async function countTask(task){
+        try{return await task();}finally{assetsProgress++;}
+      }
+      hint.textContent='Caricamento personaggi e prima isola…';
+      // Prima i personaggi necessari; poi gli elementi scenografici.
+      await countTask(()=>loadHeroModel(loader));
+      const essential=await Promise.allSettled([
+        countTask(()=>loadEnemyModel('slime')),
+        countTask(()=>loadEnemyModel('goblin')),
+        countTask(()=>loadEnemyModel('boss'))
+      ]);
+      if(essential.some(r=>r.status==='rejected'))console.warn('Alcuni nemici usano modelli provvisori',essential);
+      // L'intero mondo deve essere pronto prima di nascondere il caricamento.
+      // Non è più una sequenza post-menu, che dava l'impressione di vedere la 0.9.
+      for(const key of Object.keys(modelSources)){
+        hint.textContent='Preparazione ambiente: '+key.replaceAll('_',' ')+'…';
+        await countTask(()=>loadOneAsset(loader,key));
+      }
+      assetsFinished=true;
+      hint.textContent='Il mondo è pronto. Ultimi preparativi…';
+      // Lascia respirare il renderer: compila una sola volta dopo il caricamento.
+      renderer.compile(scene,camera);
+      const wait=Math.max(0,MIN_LOADING_MS-(performance.now()-loadStarted));
+      if(wait>0)await new Promise(resolve=>setTimeout(resolve,wait));
       criticalAssetsReady=true;
-      hint.textContent='Personaggi pronti!';
+      hint.textContent='Tutto pronto! Ruota il telefono in orizzontale e gioca.';
+      if(loadBar)loadBar.style.width='100%';
+      if(loadPercent)loadPercent.textContent='100%';
+      if(loadClock)loadClock.textContent='Caricamento completato';
       await new Promise(resolve=>requestAnimationFrame(resolve));
       loading.classList.add('hide');
-      // Prima il boss, poi gli oggetti di scena: non rallentano l'avvio.
-      loadEnemyModel('boss').catch(e=>console.warn('Boss GLB non disponibile:',e))
-        .then(()=>loadDecorAssets(loader));
     }catch(error){
-      console.error('Errore caricamento risorse fondamentali',error);
-      hint.textContent='Non riesco a caricare il mago. Controlla la connessione e aggiorna la pagina. '+String(error.message||error).slice(0,100);
+      console.error('Errore caricamento',error);
+      hint.textContent='Caricamento interrotto: '+String(error.message||error).slice(0,110)+'. Aggiorna la pagina.';
       hint.style.color='#ffe2a5';
     }
   }
@@ -705,29 +794,38 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb',
-    fort_closed:'./assets/fort_closed.glb',
-    goblin_tower:'./assets/goblin_tower.glb',
-    goblin_tent:'./assets/goblin_tent.glb',
-    goblin_fence:'./assets/goblin_fence.glb',
-    boat:'./assets/boat.glb',palm:'./assets/palm.glb',
-    pine:'./assets/pine.glb',tree:'./assets/tree.glb',
-    rock_mid:'./assets/rock_mid.glb',
-    bow:'./assets/bow.glb',dagger:'./assets/dagger.glb',mace:'./assets/mace.glb'
+    fort_open:'./assets/fort_open.glb?v=0110',
+    fort_closed:'./assets/fort_closed.glb?v=0110',
+    goblin_tower:'./assets/goblin_tower.glb?v=0110',
+    goblin_tent:'./assets/goblin_tent.glb?v=0110',
+    goblin_fence:'./assets/goblin_fence.glb?v=0110',
+    boat:'./assets/boat.glb?v=0110',palm:'./assets/palm.glb?v=0110',
+    pine:'./assets/pine.glb?v=0110',tree:'./assets/tree.glb?v=0110',
+    rock_mid:'./assets/rock_mid.glb?v=0110',
+    bow:'./assets/bow.glb?v=0110',dagger:'./assets/dagger.glb?v=0110',mace:'./assets/mace.glb?v=0110'
   };
   // [modello, posizione X/Y/Z, altezza, rotazione Y]
   // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
+  // Disposizione ordinata: roccaforte aperta = ingresso del campo;
+  // torri agli angoli, tende a lati del focolare, palizzate sul perimetro.
+  // La roccaforte chiusa è scenografia di fondo per l'arena più ampia.
   const environmentSlots=[
-    ['fort_open',[16,0,-9],5.25,0],
-    ['fort_closed',[16,0,-19],5.05,.20],
-    ['goblin_tower',[10.9,0,-8.6],3.9,.15],
-    ['goblin_tower',[21.3,0,-8.6],3.9,-.24],
-    ['goblin_tent',[13.0,0,-4.2],2.25,.22],
-    ['goblin_tent',[20.2,0,-4.5],2.05,-.65],
-    ['goblin_fence',[11,0,-4.4],2.05,1.52],
-    ['goblin_fence',[21.4,0,-4.3],2.05,1.57],
-    ['goblin_fence',[12,0,-13.2],2.05,.13],
-    ['goblin_fence',[20.1,0,-13.2],2.05,-.12],
+    ['fort_open',[16,0,-14.8],5.25,0],
+    ['fort_closed',[22,0,-34],8.5,.0],
+    ['goblin_tower',[9.4,0,-14.1],4.1,.15],
+    ['goblin_tower',[22.6,0,-14.1],4.1,-.15],
+    ['goblin_tower',[9.4,0,-2.7],3.9,.10],
+    ['goblin_tower',[22.6,0,-2.7],3.9,-.10],
+    ['goblin_tent',[12.0,0,-8.0],2.45,.55],
+    ['goblin_tent',[20.0,0,-8.0],2.45,-.55],
+    ['goblin_tent',[12.0,0,-4.8],2.0,1.2],
+    ['goblin_tent',[20.0,0,-4.8],2.0,-1.2],
+    ['goblin_fence',[9.5,0,-8.8],2.15,Math.PI/2],
+    ['goblin_fence',[22.5,0,-8.8],2.15,Math.PI/2],
+    ['goblin_fence',[12.0,0,-2.3],2.15,0],
+    ['goblin_fence',[20.0,0,-2.3],2.15,0],
+    ['goblin_fence',[11.4,0,-15.4],2.15,0],
+    ['goblin_fence',[20.6,0,-15.4],2.15,0],
     ['rock_mid',[-13.8,0,7.1],0.58,0.3],
     ['rock_mid',[-7.2,0,6.8],0.48,2.1],
     ['rock_mid',[-7.7,0,11.7],0.37,1.1],
@@ -758,11 +856,11 @@ function init(){
     ['rock_mid',[-14.3,0,-3.2],0.22,1.6],
     ['rock_mid',[0.1,0,8.5],0.32,0.4],
     ['rock_mid',[-3.1,0,13.8],0.18,1.3],
-    ['boat',[-20.0,-.045,12.7],1.25,1.05],
-    ['palm',[-18.4,0,18.2],4.45,.25],
-    ['palm',[-15.2,0,16.3],4.75,1.62],
+    ['boat',[-18.5,.035,15.1],1.85,.55],
+    ['palm',[-21.7,0,18.2],4.45,.25],
+    ['palm',[-15.2,0,18.9],4.75,1.62],
     ['palm',[-21.7,0,8.4],4.10,2.15],
-    ['palm',[-16.7,0,22.1],4.55,3.10],
+    ['palm',[-16.7,0,23.8],4.55,3.10],
     ['palm',[-19.6,0,6.8],4.25,.77],
     ['pine',[-21,0,-15],5.4,.22],
     ['pine',[-15.6,0,-18],5.15,1.12],
@@ -775,7 +873,7 @@ function init(){
     ['tree',[22.0,0,20.2],5.0,2.6],
     ['tree',[10.6,0,20.4],4.8,.55],
     ['tree',[20.2,0,8.7],5.35,1.25],
-    ['tree',[10.5,0,12.4],4.95,3.05],
+    ['tree',[10.5,0,12.4],4.95,3.05]
   ];
   function normalizeModel(source,targetHeight){
     const box=new THREE.Box3().setFromObject(source),size=box.getSize(new V());
@@ -814,7 +912,10 @@ function init(){
           if(name!==key)continue;
           const instance=scene.clone(true),holder=new THREE.Group();
           holder.position.set(...pos);holder.rotation.y=rotation;
-          if(key==='rock_mid')holder.scale.setScalar(height/heights.rock_mid);
+          // L'altezza indicata nello slot ora si applica a TUTTI i modelli.
+          // Nella 0.10 solo le rocce erano scalate: la roccaforte del Boss
+          // rimaneva minuscola anche modificando l'altezza nella tabella.
+          holder.scale.setScalar(height/heights[key]);
           holder.add(instance);
           if(key==='boat'){
             holder.rotation.z=.075;holder.rotation.x=.035;
@@ -843,7 +944,6 @@ function init(){
   }
   async function loadDecorAssets(loader){
     for(const key of Object.keys(modelSources)){
-      if(key==='boat')continue; // già pronta prima di iniziare
       await loadOneAsset(loader,key);
     }
   }
@@ -873,7 +973,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb?v=0100',boss:'./assets/boss.glb?v=0100'};
+    const paths={slime:'./slime-verde.glb?v=0110',goblin:'./goblin-ottimizzato.glb?v=0110',boss:'./assets/boss.glb?v=0110'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -1004,7 +1104,7 @@ function init(){
     origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
     for(const a of arrows)removeArrow(a);arrows.length=0;
     for(const a of sparks)world.remove(a.mesh);sparks.length=0;
-    hero.root.position.set(-17.5,0,12.9);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
+    hero.root.position.set(-17.2,0,12.4);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
     damage=1;fireRate=1;moveSpeed=4.15;extraArrows=0;pierce=0;regeneration=0;
     stage=1;element='arcana';upgradeQueue=0;Object.keys(upgradeLevels).forEach(k=>delete upgradeLevels[k]);
     $('#upgrade-overlay').classList.remove('visible');refreshElement();
@@ -1087,9 +1187,9 @@ function init(){
     }
     gainXp(kind==='goblin'?20:12);
     if(stage===1&&kills>=5){
-      stage=2;const boss=bossGoblin(16,-18.4,89);enemies.push(boss);
+      stage=2;const boss=bossGoblin(22,-28,89);enemies.push(boss);
       // Il boss arriva dopo i cinque nemici iniziali.
-      toast('BOSS GOBLIN! RAGGIUNGI LA ROCCAFORTE A SUD!',4);updateHud();
+      toast('BOSS GOBLIN! SEGUI IL SENTIERO VERSO SUD-EST!',5);updateHud();
     }
   }
   function hurt(e,a){
@@ -1114,7 +1214,7 @@ function init(){
     const w=window.innerWidth,h=window.innerHeight;
     renderer.setSize(w,h,false);
     // Area visibile costante in altezza per far risaltare davvero il personaggio 3D.
-    const span=h<450?7.5:8.0;
+    const span=h<450?8.2:8.5;
     camera.top=span;camera.bottom=-span;camera.right=span*w/h;camera.left=-camera.right;camera.updateProjectionMatrix();
   }
   window.addEventListener('resize',resize);resize();
@@ -1124,7 +1224,7 @@ function init(){
   function updateMiniMap(dt){
     miniClock+=dt;if(!miniCtx||miniClock<.18)return;miniClock=0;
     const c=miniCtx,W=c.canvas.width,H=c.canvas.height;
-    const mapX=x=>(x+26)/52*W,mapY=z=>(z+26)/52*H;
+    const mapX=x=>(x+43)/86*W,mapY=z=>(z+43)/86*H;
     c.clearRect(0,0,W,H);c.fillStyle='#a7c393';c.fillRect(0,0,W,H);
     // Piccoli gruppi di alberi: indizi geografici, non una seconda scena 3D.
     c.fillStyle='#679d73';for(let i=0;i<60;i++){
@@ -1140,17 +1240,20 @@ function init(){
       const z=-26+i*52/42,x=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
       if(i)c.lineTo(mapX(x),mapY(z));else c.moveTo(mapX(x),mapY(z));
     }c.stroke();
-    c.fillStyle='#9b7050';c.fillRect(mapX(16)-14,mapY(-9)-12,28,24);
-    c.strokeStyle='#624d37';c.lineWidth=2;c.strokeRect(mapX(16)-14,mapY(-9)-12,28,24);
+    c.fillStyle='#9b7050';c.fillRect(mapX(16)-10,mapY(-9)-8,20,16);
+    c.strokeStyle='#624d37';c.lineWidth=2;c.strokeRect(mapX(16)-10,mapY(-9)-8,20,16);
+    c.fillStyle='#988c7a';c.beginPath();c.ellipse(mapX(22),mapY(-28),13,12,0,0,Math.PI*2);c.fill();
+    c.strokeStyle='#e2c99c';c.lineWidth=2;c.stroke();
+    c.fillStyle='#e9d4a7';c.beginPath();c.ellipse(mapX(-20),mapY(14),13,12,0,0,Math.PI*2);c.fill();
     c.fillStyle='#e3caa0';c.fillRect(mapX(4.5)-6,mapY(.7)-3,12,6);
     c.fillStyle='#b7e4ef';c.beginPath();c.arc(mapX(9),mapY(1.45),5,0,Math.PI*2);c.fill();
     for(const e of enemies){c.fillStyle=e.userData.kind==='boss'?'#b94336':'#c56d42';c.beginPath();c.arc(mapX(e.position.x),mapY(e.position.z),e.userData.kind==='boss'?4.4:2.5,0,Math.PI*2);c.fill();}
     const px=mapX(hero.root.position.x),py=mapY(hero.root.position.z);
     c.fillStyle='#fff4c8';c.strokeStyle='#215e91';c.lineWidth=2.3;c.beginPath();c.arc(px,py,4.3,0,Math.PI*2);c.fill();c.stroke();
     let region='BOSCO DEL RISVEGLIO';
-    if(Math.hypot(hero.root.position.x-16,hero.root.position.z+9)<7)region='AVAMPOSTO GOBLIN';
+    if(Math.hypot(hero.root.position.x-22,hero.root.position.z+28)<12)region='ARENA DEL BOSS GOBLIN';
+    else if(Math.hypot(hero.root.position.x-16,hero.root.position.z+9)<8)region='AVAMPOSTO GOBLIN';
     else if(Math.hypot(hero.root.position.x-9,hero.root.position.z-1.45)<4)region='ROVINE DEL CRISTALLO';
-    else if(Math.hypot(hero.root.position.x-16,hero.root.position.z+19)<7)region='ARENA DEL BOSS GOBLIN';
     else if(hero.root.position.x< -15&&hero.root.position.z>5)region='SPIAGGIA DEL NAUFRAGIO';
     else if(hero.root.position.x< -7&&hero.root.position.z< -8)region='PINETA DEI VENTI';
     else if(hero.root.position.x>9&&hero.root.position.z>8)region='BOSCO DELLE FOGLIE';
@@ -1180,8 +1283,8 @@ function init(){
         const mx=x/dist,my=y/dist;
         // Asse del joystick allineato alla telecamera isometrica.
         const vx=(mx+my)*Math.SQRT1_2,vz=(my-mx)*Math.SQRT1_2;
-        hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x+vx*moveSpeed*dt*strength,-23,23);
-        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z+vz*moveSpeed*dt*strength,-22,22);
+        hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x+vx*moveSpeed*dt*strength,-40,40);
+        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z+vz*moveSpeed*dt*strength,-42,42);
         facing.set(vx,0,vz);hero.motion.position.y=.045+Math.sin(elapsed*13)*.04;
         hero.legs[0].rotation.x=Math.sin(elapsed*12)*.20;
         hero.legs[1].rotation.x=-hero.legs[0].rotation.x;
@@ -1267,5 +1370,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0100').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0110').catch(()=>{});
 }
