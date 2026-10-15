@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.7 | Foresta Incantata
+/* THE FIRST SPARK — Alpha 0.8 | Mondo 3D Esplorabile
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -159,7 +159,7 @@ function init(){
       if(n===0)return min;
       const a=pathPts[n-1],b=pathPts[n],dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz))),d=Math.hypot(x-(a[0]+dx*t),z-(a[1]+dz*t));return Math.min(min,d);
     },99);
-    if(nearest<2.8||Math.hypot(x+10,z-9)<5||Math.hypot(x+6,z-.7)<4.8||Math.hypot(x-8,z-2)<4.0)continue;
+    if(nearest<2.8||Math.hypot(x+10,z-9)<5||Math.hypot(x+6,z-.7)<4.8||Math.hypot(x-8,z-2)<4.0||Math.hypot(x-16,z+9)<8.2)continue;
     tree(x,z,.81+rand(i+402)*.63,i);
   }
   // Presenze piccole e colorate nel sottobosco.
@@ -184,7 +184,7 @@ function init(){
   petals.castShadow=false;world.add(petals);
   for(let i=0;i<33;i++){
     const x=(rand(i*4+235)-.5)*43,z=(rand(i*8+335)-.5)*42;
-    if(Math.hypot(x+6,z)<3||Math.hypot(x-9,z-2)<3)continue;
+    if(Math.hypot(x+6,z)<3||Math.hypot(x-9,z-2)<3||Math.hypot(x-16,z+9)<7.2)continue;
     smoothRock(x,z,.28+rand(i+91)*.65,i);
   }
   for(let i=0;i<19;i++){
@@ -204,6 +204,243 @@ function init(){
   const crystalMesh=mesh(new THREE.OctahedronGeometry(.37,0),m.crystal,centerCrystal);
   const glow=new THREE.PointLight('#84efff',0,3.1);glow.position.set(0,.35,0);centerCrystal.add(glow);
   centerCrystal.visible=false;
+  // ALPHA 0.8 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
+  // Gli elementi architettonici goblin sono segnaposto originali e modulari:
+  // potranno essere sostituiti dai futuri GLB senza toccare il gameplay.
+  const env=new THREE.Group();env.name='Ambiente_Alpha_08';world.add(env);
+  const em={
+    earth:mat('#7f9870'),earthLight:mat('#91a77a'),sand:mat('#d8c39c'),
+    moss:mat('#719774'),mossLight:mat('#a5c58d'),darkStone:mat('#7d8d83'),
+    slate:mat('#a5afa1'),slateEdge:mat('#7c8b83'),
+    wood:mat('#806046'),woodLight:mat('#aa8159'),woodDark:mat('#594b3d'),
+    rope:mat('#d3b68a'),tent:mat('#8e6550',.98,{side:THREE.DoubleSide}),
+    tentEdge:mat('#bb936a',.98,{side:THREE.DoubleSide}),
+    goblinCloth:mat('#7d6842',.95,{side:THREE.DoubleSide}),
+    banner:mat('#a95542',.95,{side:THREE.DoubleSide}),
+    flame:mat('#ffc270',.42,{emissive:'#ff8c36',emissiveIntensity:1.8}),
+    flameCore:mat('#fff0ad',.36,{emissive:'#ffd05c',emissiveIntensity:1.4}),
+    waterDeep:mat('#4a9c9f',.33,{transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false}),
+    waterLight:mat('#92d3cb',.3,{transparent:true,opacity:.46,side:THREE.DoubleSide,depthWrite:false}),
+    shrub:mat('#659c69'),shrubLight:mat('#91bb77'),reed:mat('#8baa6b'),
+    magic:mat('#c3d7ed',.37,{emissive:'#72bbdb',emissiveIntensity:.48})
+  };
+  // Chiazze di terreno: distinguono bosco, costa, rovine e campo nemico.
+  function terrainPatch(x,z,rx,rz,material,seed,y=-.055){
+    const geo=new THREE.CircleGeometry(1,26),a=geo.attributes.position;
+    for(let i=1;i<a.count;i++){
+      const ang=Math.atan2(a.getY(i),a.getX(i));
+      const wave=1+.07*Math.sin(ang*5+seed)+.06*Math.cos(ang*8+seed*2);
+      a.setXY(i,a.getX(i)*wave,a.getY(i)*wave);
+    }
+    geo.computeVertexNormals();
+    const o=mesh(geo,material,env,[x,y,z],[rx,rz,1],false);o.rotation.x=-Math.PI/2;return o;
+  }
+  terrainPatch(16,-9,7.0,6.1,em.earthLight,2,-.053);
+  terrainPatch(-10,9,6.4,5.4,em.sand,3,-.050);
+  terrainPatch(9,1.4,4.4,4.0,em.moss,4,-.052);
+  terrainPatch(-18,-14,5.5,4.4,em.earth,5,-.054);
+  // Fiume sinuoso: letto, rive e superficie traslucida. Il sentiero lo attraversa.
+  function riverStrip(width,material,y,phase){
+    const verts=[],uv=[],idx=[],N=94;
+    for(let i=0;i<=N;i++){
+      const z=-31+i*62/N,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+      const w=width*(1+.08*Math.sin(z*.31));
+      for(let side of [-1,1]){
+        verts.push(mid+side*w,y,z);
+        uv.push(i/N,side===-1?0:1);
+      }
+      if(i<N){const k=i*2;idx.push(k,k+2,k+1,k+1,k+2,k+3)}
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(idx);g.computeVertexNormals();
+    return mesh(g,material,env,[0,0,0],[1,1,1],false);
+  }
+  riverStrip(2.35,em.sand,-.035,0);
+  riverStrip(1.99,em.moss,-.024,0);
+  riverStrip(1.64,em.waterDeep,.015,0);
+  riverStrip(1.31,em.waterLight,.018,0);
+  // Riflessi d'acqua discreti, senza shader o effetti pesanti su iPhone.
+  const riverGlints=[];
+  for(let i=0;i<16;i++){
+    const z=-25+i*3.1,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+    const g=mesh(new THREE.PlaneGeometry(.32,.024),new THREE.MeshBasicMaterial({color:'#e1fff1',transparent:true,opacity:.35,depthWrite:false,side:THREE.DoubleSide}),env,[mid+Math.sin(i*7)*.65,.023,z],[1,1,1],false);
+    g.rotation.x=-Math.PI/2;riverGlints.push(g);
+  }
+  // Ponticello praticabile visivamente (nessun salto richiesto dal movimento).
+  const riverBridge=new THREE.Group();riverBridge.position.set(4.5,0,.7);env.add(riverBridge);
+  for(let i=0;i<13;i++){
+    const x=(i-6)*.34;
+    const plank=mesh(new THREE.BoxGeometry(.31,.115,3.9),i%3?em.woodLight:em.wood,riverBridge,[x,.047,0]);
+    plank.rotation.y=Math.sin(i*1.9)*.015;
+  }
+  for(let side of [-1,1]){
+    for(let x of [-2.15,-1.1,0,1.1,2.15]){
+      stick(riverBridge,em.woodDark,[x,.04,side*1.77],[x,.94,side*1.77],.087,.075,7);
+    }
+    stick(riverBridge,em.wood,[ -2.2,.77,side*1.77],[2.2,.77,side*1.77],.075,.075,7);
+    stick(riverBridge,em.rope,[-2.2,.48,side*1.77],[2.2,.48,side*1.77],.026,.026,6);
+  }
+  // Cespugli e canneti delle sponde. Istanziare evita decine di draw-call.
+  const bushGeo=new THREE.IcosahedronGeometry(1,1),bushM=new THREE.InstancedMesh(bushGeo,em.shrub,66);
+  const reeds=new THREE.InstancedMesh(new THREE.ConeGeometry(.075,.78,5),em.reed,92);
+  const dummy=new THREE.Object3D();
+  for(let i=0;i<66;i++){
+    const z=-27+rand(i*12+9)*54,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+    const x=mid+(i%2?1:-1)*(2.5+rand(i*31)*1.3);
+    dummy.position.set(x,.18,z);dummy.rotation.set(0,rand(i+3)*6.28,0);
+    const sc=.19+rand(i*7+2)*.36;dummy.scale.set(sc,sc*.75,sc);dummy.updateMatrix();bushM.setMatrixAt(i,dummy.matrix);
+  }
+  bushM.castShadow=false;bushM.receiveShadow=false;env.add(bushM);
+  for(let i=0;i<92;i++){
+    const z=-28+rand(i*19+8)*56,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+    const x=mid+(i%2?1:-1)*(1.93+rand(i*37)*.85);
+    dummy.position.set(x,.25,z);dummy.rotation.set(0,rand(i+2)*6.28,(rand(i+13)-.5)*.35);
+    const sc=.55+rand(i*3+11)*.85;dummy.scale.set(sc,sc,sc);dummy.updateMatrix();reeds.setMatrixAt(i,dummy.matrix);
+  }
+  reeds.castShadow=false;reeds.receiveShadow=false;env.add(reeds);
+  // Sentieri secondari e pietre che guidano verso il futuro avamposto.
+  function steppingTrail(points,seed){
+    const line=new THREE.CatmullRomCurve3(points.map(p=>new V(p[0],0,p[1])));
+    for(let i=0;i<23;i++){
+      const t=i/22,at=line.getPoint(t),s=.27+rand(i*11+seed)*.23;
+      const stone=mesh(new THREE.CylinderGeometry(s*.9,s,.055,7),i%4?em.sand:em.slate,env,[at.x,-.004,at.z],[1,1,.8],false);
+      stone.rotation.y=rand(i+seed)*6.28;
+    }
+  }
+  steppingTrail([[11,-.7],[12,-3],[13.6,-4.5],[15,-5.8]],13);
+  steppingTrail([[-10,5],[-11.4,7],[-12.6,8.6]],21);
+  // AVAMPOSTO GOBLIN PROVVISORIO: palizzata, torri, tende, fuoco e bottino.
+  // Il centro rimane aperto, con ingresso sul lato nord (verso il sentiero).
+  const camp=new THREE.Group();camp.position.set(16,0,-9);camp.name='Avamposto_goblin_segnaposto';env.add(camp);
+  function localBox(parent,material,x,y,z,w,h,d){return mesh(new THREE.BoxGeometry(w,h,d),material,parent,[x,y,z]);}
+  function pole(parent,a,b,r=.075,material=em.woodDark){return stick(parent,material,a,b,r,r*.86,7)}
+  function fenceSegment(parent,x1,z1,x2,z2,n=5){
+    for(let i=0;i<=n;i++){
+      const t=i/n,x=x1+(x2-x1)*t,z=z1+(z2-z1)*t;
+      pole(parent,[x,0,z],[x,1.35+(i%3)*.09,z],.13,i%3?em.wood:em.woodDark);
+    }
+    pole(parent,[x1,.65,z1],[x2,.65,z2],.075,em.woodLight);
+  }
+  fenceSegment(camp,-5,-4.1,5,-4.1,18);
+  fenceSegment(camp,-5,-4.1,-5,3.8,13);
+  fenceSegment(camp,5,-4.1,5,3.8,13);
+  fenceSegment(camp,-5,3.8,-1.8,3.8,5);
+  fenceSegment(camp,1.8,3.8,5,3.8,5);
+  // Portale senza porte: pronto a essere sostituito dalla futura roccaforte GLB.
+  for(let x of [-1.75,1.75]){
+    pole(camp,[x,0,3.85],[x,2.55,3.85],.19,em.woodDark);
+    ball(camp,em.flame,[x,2.6,3.85],[.14,.18,.14],true,false);
+  }
+  localBox(camp,em.woodDark,0,2.3,3.85,3.65,.28,.35);
+  function goblinFlag(parent,x,y,z){
+    pole(parent,[x,y,z],[x,y+1.5,z],.058,em.woodDark);
+    const flag=mesh(new THREE.PlaneGeometry(.84,.55),em.banner,parent,[x+.43,y+1.15,z],[1,1,1],false);
+    flag.rotation.y=.09;
+    ball(parent,em.woodDark,[x,y+1.53,z],[.095,.095,.095],true,false);
+  }
+  goblinFlag(camp,-1.5,2.2,3.85);goblinFlag(camp,1.5,2.2,3.85);
+  function tower(parent,x,z){
+    const t=new THREE.Group();t.position.set(x,0,z);parent.add(t);
+    for(let sx of [-.65,.65])for(let sz of [-.65,.65])pole(t,[sx,0,sz],[sx,2.45,sz],.16,em.woodDark);
+    localBox(t,em.woodLight,0,2.2,0,1.8,.2,1.8);
+    for(let sx of [-.76,.76])localBox(t,em.woodDark,sx,2.63,0,.12,.75,1.9);
+    for(let sz of [-.76,.76])localBox(t,em.woodDark,0,2.63,sz,1.9,.75,.12);
+    const roof=mesh(new THREE.ConeGeometry(1.42,1.15,4),em.goblinCloth,t,[0,3.37,0]);roof.rotation.y=Math.PI/4;
+    return t;
+  }
+  tower(camp,-4.2,2.95);tower(camp,4.2,2.95);
+  function tent(parent,x,z,rotation=0,scale=1){
+    const t=new THREE.Group();t.position.set(x,0,z);t.rotation.y=rotation;t.scale.setScalar(scale);parent.add(t);
+    localBox(t,em.woodDark,0,.10,0,2.5,.16,2.1);
+    const pts=[-1.25,0,-1.05, 1.25,0,-1.05, 0,1.9,-1.05, -1.25,0,1.05, 1.25,0,1.05, 0,1.9,1.05];
+    const ind=[0,2,5,0,5,3,2,1,4,2,4,5,0,1,2,3,5,4];
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));g.setIndex(ind);g.computeVertexNormals();
+    mesh(g,em.tent,t,[0,0,0],[1,1,1],false);
+    pole(t,[0,0,-1.2],[0,1.95,-1.2],.075,em.woodLight);
+    pole(t,[0,0,1.2],[0,1.95,1.2],.075,em.woodLight);
+    localBox(t,em.woodDark,0,.68,1.065,.9,1.2,.06);
+    return t;
+  }
+  tent(camp,-2.65,-1.3,.16,1);tent(camp,2.6,-1.3,-.28,.91);
+  function barrel(parent,x,z,s=1){
+    const b=new THREE.Group();b.position.set(x,0,z);b.scale.setScalar(s);parent.add(b);
+    mesh(new THREE.CylinderGeometry(.32,.38,.77,9),em.wood,b,[0,.38,0]);
+    for(let y of [.16,.64])mesh(new THREE.TorusGeometry(.34,.035,5,9),em.woodDark,b,[0,y,0]).rotation.x=Math.PI/2;
+  }
+  function crate(parent,x,z,s=1){
+    const c=new THREE.Group();c.position.set(x,0,z);c.rotation.y=rand(x*9+z*13)*.3;c.scale.setScalar(s);parent.add(c);
+    localBox(c,em.woodLight,0,.32,0,.73,.64,.7);
+    localBox(c,em.woodDark,0,.34,.365,.77,.08,.065);
+    localBox(c,em.woodDark,0,.34,-.365,.77,.08,.065);
+    localBox(c,em.woodDark,.365,.34,0,.065,.08,.77);
+  }
+  barrel(camp,-3.8,-3.0);barrel(camp,-3.2,-3.1,.76);
+  crate(camp,3.7,-2.5,1);crate(camp,3.0,-3.1,.73);crate(camp,2.9,-2.1,.59);
+  // Falò, pietre e ceppi; le fiamme si muovono nel ciclo di animazione.
+  const flames=[];
+  function firepit(parent,x,z,size=1){
+    const f=new THREE.Group();f.position.set(x,0,z);f.scale.setScalar(size);parent.add(f);
+    for(let i=0;i<9;i++){
+      const a=i*6.283/9;
+      ball(f,em.slate,[Math.cos(a)*.57,.14,Math.sin(a)*.57],[.24,.17,.19],true,false);
+    }
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/4;
+      pole(f,[-Math.cos(a)*.48,.13,-Math.sin(a)*.48],[Math.cos(a)*.48,.22,Math.sin(a)*.48],.10,em.woodDark);
+    }
+    for(let i=0;i<3;i++){
+      const flame=mesh(new THREE.ConeGeometry(.20+i*.055,.7-i*.1,6),i===1?em.flameCore:em.flame,f,[Math.sin(i*2.3)*.14,.56+i*.07,Math.cos(i*1.5)*.12],[1,1,1],false);
+      flames.push({mesh:flame,phase:i*1.7});
+    }
+  }
+  firepit(camp,0,-.35,.87);
+  for(let i=0;i<4;i++){
+    const a=i*Math.PI/2+.5;
+    const log=mesh(new THREE.CylinderGeometry(.27,.30,.43,9),em.wood,camp,[Math.cos(a)*1.65,.22,Math.sin(a)*1.65-.4]);log.rotation.z=Math.PI/2;
+  }
+  // Antiche rovine attorno al cristallo: forme neutre, indipendenti dai futuri GLB.
+  const ruins=new THREE.Group();ruins.position.set(9,0,1.45);env.add(ruins);
+  function ruinedColumn(x,z,height){
+    const c=new THREE.Group();c.position.set(x,0,z);ruins.add(c);
+    mesh(new THREE.CylinderGeometry(.39,.45,.23,8),em.darkStone,c,[0,.12,0]);
+    mesh(new THREE.CylinderGeometry(.25,.31,height,8),em.slate,c,[0,.25+height/2,0]);
+    mesh(new THREE.CylinderGeometry(.39,.32,.19,8),em.darkStone,c,[0,.25+height+.095,0]);
+    ball(c,em.moss,[.17,.17+height,.11],[.22,.07,.23],true,false);
+  }
+  ruinedColumn(-2.2,-1.6,1.15);ruinedColumn(2.1,-1.65,1.75);
+  ruinedColumn(-2.2,1.75,1.72);ruinedColumn(2.2,1.9,.82);
+  for(let i=0;i<9;i++){
+    const a=i*6.283/9,r=2.5+rand(i*13)*.35;
+    mesh(new THREE.BoxGeometry(.55,.18,.44),em.slateEdge,ruins,[Math.cos(a)*r,.09,Math.sin(a)*r]).rotation.y=a;
+  }
+  // Molo e attrezzi accanto al laghetto esistente.
+  const dock=new THREE.Group();dock.position.set(-12.0,0,7.7);dock.rotation.y=-.36;env.add(dock);
+  for(let i=0;i<7;i++)localBox(dock,i%2?em.woodLight:em.wood,(i-3)*.34,.11,0,.31,.13,1.55);
+  for(let x of [-1.14,1.14])for(let z of [-.65,.65])pole(dock,[x,-.03,z],[x,.62,z],.10,em.woodDark);
+  barrel(dock,-1.45,-1.05,.64);
+  // Pannelli direzionali leggibili anche prima di modellare gli edifici definitivi.
+  function signpost(x,z,angle=0){
+    const sign=new THREE.Group();sign.position.set(x,0,z);sign.rotation.y=angle;env.add(sign);
+    pole(sign,[0,0,0],[0,1.95,0],.10,em.woodDark);
+    localBox(sign,em.woodLight,.22,1.64,0,1.3,.30,.12);
+    const arrow=mesh(new THREE.ConeGeometry(.22,.40,3),em.woodLight,sign,[.99,1.64,0]);arrow.rotation.z=-Math.PI/2;
+    localBox(sign,em.wood,.04,1.19,0,.9,.26,.12);
+  }
+  signpost(-3,2.6,.22);signpost(11,-1.2,-.26);
+  // Dettagli magici nella radura iniziale e sulla strada delle rovine.
+  const fireflies=[];
+  const fireflyMaterial=new THREE.MeshBasicMaterial({color:'#e8ffe4',transparent:true,opacity:.7,depthWrite:false});
+  const fireflyGeo=new THREE.SphereGeometry(.042,6,4);
+  for(let i=0;i<19;i++){
+    const x=-13+rand(i*17+31)*26,z=-6+rand(i*23+72)*17;
+    const light=mesh(fireflyGeo,fireflyMaterial,env,[x,.8+rand(i*19)*1.2,z],[1,1,1],false);
+    fireflies.push({mesh:light,x,z,y:light.position.y,phase:rand(i*9+2)*6.28});
+  }
+  // Altri elementi di scena sono statici e non modificano collisioni o nemici.
+  function animateEnvironment(time){
+    for(let i=0;i<riverGlints.length;i++)riverGlints[i].material.opacity=.22+.14*Math.sin(time*1.5+i*.85);
+    for(const f of flames){f.mesh.scale.y=.88+.19*Math.sin(time*9+f.phase);f.mesh.rotation.z=.11*Math.sin(time*6+f.phase)}
+    for(const p of fireflies){p.mesh.position.y=p.y+.18*Math.sin(time*1.6+p.phase);p.mesh.position.x=p.x+.13*Math.sin(time*.9+p.phase)}
+  }
   // Personaggio chibi fedele ai tratti dell'illustrazione originale.
   function starShape(outer=.20,inner=.095){
     const s=new THREE.Shape();for(let i=0;i<10;i++){
@@ -306,9 +543,9 @@ function init(){
   };
   const environmentSlots=[
     ['pine',[-18,0,-10],5.0,0.2],['pine',[17,0,10],5.5,1.4],
-    ['palm',[-16,0,13],4.4,.6],['palm',[19,0,-12],4.8,2.2],
+    ['palm',[-16,0,13],4.4,.6],['palm',[23,0,14],4.8,2.2],
     ['tree',[-13,0,-15],5.4,0],['tree',[16,0,17],5.1,2.6],
-    ['rock_big',[-5,0,7],1.7,.3],['rock_big',[16,0,-5],2.1,1.1],
+    ['rock_big',[-5,0,7],1.7,.3],['rock_big',[23,0,-4],2.1,1.1],
     ['rock_mid',[-7,0,-8],1.1,.4],['rock_mid',[12,0,9],1.3,2.5],
     ['bridge',[-10,0,5.5],3.7,.25],['boat',[-11,0,10.0],2.8,1.4]
   ];
@@ -394,7 +631,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb',boss:'./assets/boss.glb'};
+    const paths={slime:'./slime-verde.glb',goblin:'./goblin-ottimizzato.glb?v=0800',boss:'./assets/boss.glb?v=0800'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -637,6 +874,42 @@ function init(){
     camera.top=span;camera.bottom=-span;camera.right=span*w/h;camera.left=-camera.right;camera.updateProjectionMatrix();
   }
   window.addEventListener('resize',resize);resize();
+  // Mini-mappa in Canvas 2D: nessuna texture aggiuntiva da scaricare.
+  const mini=$('#mini-map'),miniCtx=mini?.getContext('2d');
+  let miniClock=0,lastRegion='';
+  function updateMiniMap(dt){
+    miniClock+=dt;if(!miniCtx||miniClock<.18)return;miniClock=0;
+    const c=miniCtx,W=c.canvas.width,H=c.canvas.height;
+    const mapX=x=>(x+26)/52*W,mapY=z=>(z+26)/52*H;
+    c.clearRect(0,0,W,H);c.fillStyle='#a7c393';c.fillRect(0,0,W,H);
+    // Piccoli gruppi di alberi: indizi geografici, non una seconda scena 3D.
+    c.fillStyle='#679d73';for(let i=0;i<60;i++){
+      const x=(rand(i*7+6)-.5)*48,z=(rand(i*13+26)-.5)*48;
+      c.beginPath();c.arc(mapX(x),mapY(z),1.6+rand(i*11)*1.6,0,Math.PI*2);c.fill();
+    }
+    c.fillStyle='#e0cda2';c.beginPath();c.ellipse(mapX(-10),mapY(9),14,10,0,0,Math.PI*2);c.fill();
+    c.fillStyle='#72b6b5';c.beginPath();c.ellipse(mapX(-10),mapY(9),11,7,0,0,Math.PI*2);c.fill();
+    c.strokeStyle='#c7a978';c.lineWidth=6;c.lineCap='round';c.beginPath();
+    pathPts.forEach(([x,z],i)=>i?c.lineTo(mapX(x),mapY(z)):c.moveTo(mapX(x),mapY(z)));c.stroke();
+    c.strokeStyle='#69afb4';c.lineWidth=9;c.beginPath();
+    for(let i=0;i<=42;i++){
+      const z=-26+i*52/42,x=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+      if(i)c.lineTo(mapX(x),mapY(z));else c.moveTo(mapX(x),mapY(z));
+    }c.stroke();
+    c.fillStyle='#9b7050';c.fillRect(mapX(16)-14,mapY(-9)-12,28,24);
+    c.strokeStyle='#624d37';c.lineWidth=2;c.strokeRect(mapX(16)-14,mapY(-9)-12,28,24);
+    c.fillStyle='#e3caa0';c.fillRect(mapX(4.5)-6,mapY(.7)-3,12,6);
+    c.fillStyle='#b7e4ef';c.beginPath();c.arc(mapX(9),mapY(1.45),5,0,Math.PI*2);c.fill();
+    for(const e of enemies){c.fillStyle=e.userData.kind==='boss'?'#b94336':'#c56d42';c.beginPath();c.arc(mapX(e.position.x),mapY(e.position.z),e.userData.kind==='boss'?4.4:2.5,0,Math.PI*2);c.fill();}
+    const px=mapX(hero.root.position.x),py=mapY(hero.root.position.z);
+    c.fillStyle='#fff4c8';c.strokeStyle='#215e91';c.lineWidth=2.3;c.beginPath();c.arc(px,py,4.3,0,Math.PI*2);c.fill();c.stroke();
+    let region='BOSCO DEL RISVEGLIO';
+    if(Math.hypot(hero.root.position.x-16,hero.root.position.z+9)<7)region='AVAMPOSTO GOBLIN';
+    else if(Math.hypot(hero.root.position.x-9,hero.root.position.z-1.45)<4)region='ROVINE DEL CRISTALLO';
+    else if(Math.hypot(hero.root.position.x+10,hero.root.position.z-9)<6)region='RIVA DEL LAGHETTO';
+    else if(Math.abs(hero.root.position.x-(4.1+.83*Math.sin(hero.root.position.z*.19+.3)+.28*Math.sin(hero.root.position.z*.43)))<3)region='FIUME DELLE SCINTILLE';
+    if(region!==lastRegion){$('#region-name').textContent=region;lastRegion=region;}
+  }
   const camLook=new V();
   const zero=new V();
   function tick(){
@@ -644,6 +917,8 @@ function init(){
     // L'ambiente è vivo anche quando è aperto il menu.
     for(const [i,treeObj] of trees.entries())treeObj.rotation.z=Math.sin(elapsed*.5+i*.9)*.005;
     for(const [i,r] of ripples.entries()){r.material.opacity=.11+.06*Math.sin(elapsed*2+i);}
+    animateEnvironment(elapsed);
+    updateMiniMap(dt);
     if(centerCrystal.visible){centerCrystal.rotation.y=elapsed*.8;centerCrystal.position.y=1.1+Math.sin(elapsed*2.2)*.15;glow.intensity=1.4+Math.sin(elapsed*3)*.45;}
     if(state==='playing'){
       const x=move.x+(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);
@@ -737,5 +1012,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0600').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0800').catch(()=>{});
 }

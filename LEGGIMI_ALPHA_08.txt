@@ -1,0 +1,41 @@
+THE FIRST SPARK — ALPHA 0.8 · AMBIENTAZIONE 3D
+================================================
+
+Base: Alpha 0.7.1 con colori corretti.
+
+NOVITÀ
+- Fiume delle Scintille con rive, acqua animata e ponte in legno.
+- Avamposto Goblin PROVVISORIO con palizzata, portale, torri,
+  due tende, falò, casse, barili e bandiere.
+- Rovine attorno al cristallo, colonne e pietre antiche.
+- Molo al laghetto, vegetazione di sponda, cespugli e canneti.
+- Sentieri secondari, cartelli, lucciole e particelle ambientali.
+- Mini-mappa con posizione del mago, nemici e punti d'interesse.
+- Nome della zona durante l'esplorazione.
+- Tutti i modelli GLB ottimizzati della Alpha 0.7.1 restano inclusi.
+- Restano i 9 potenziamenti, il Boss, l'esperienza e i comandi.
+
+Le strutture goblin sono realizzate con geometrie 3D leggere e
+servono a testare scala, atmosfera e posizione. Non sostituiscono
+le future roccaforti GLB. Gli oggetti di scena non hanno ancora
+collisioni individuali o interazioni. Il fiume è per ora decorativo.
+
+INSTALLAZIONE SU GITHUB PAGES
+1. Estrai questo ZIP.
+2. Carica nella radice del repository tutti i file e le cartelle,
+   mantenendo esattamente i nomi e la struttura (assets/, icons/).
+3. Sostituisci i file vecchi. Non caricare lo ZIP come unico file.
+4. Aspetta che GitHub Pages aggiorni il sito.
+5. Ricarica la pagina; se compare la versione vecchia, chiudi e
+   riapri il sito, o cancella i dati del sito su Safari.
+
+NOTA SULLE PRESTAZIONI
+I modelli 3D restano quelli ottimizzati e colorati della Alpha 0.7.1.
+Le nuove strutture sono create dal codice con primitive leggere e
+non aggiungono file GLB pesanti. Non è stato possibile testare
+prestazioni e resa grafica su un iPhone reale: controlla FPS,
+texture e visibilità durante il gioco.
+
+NOTA TECNICA
+Three.js e GLTFLoader sono caricati da CDN: serve Internet al
+primo avvio, oltre che per scaricare i file del gioco.

@@ -1,0 +1,14 @@
+THE FIRST SPARK — Alpha 0.7.1 — COLORI GOBLIN E BOSS CORRETTI
+
+Problema identificato: le coordinate UV dei due modelli, originate da coordinate normalizzate uint16, erano state scritte come float senza conversione (valori 0–65535 invece di 0–1). Questo impediva alle texture colore di essere visualizzate correttamente.
+
+Correzioni:
+- goblin-ottimizzato.glb: coordinate UV convertite nell’intervallo 0–1.
+- assets/boss.glb: coordinate UV convertite nell’intervallo 0–1.
+- Nessuna modifica alla geometria, alle texture o alle dimensioni dei modelli.
+- Aggiornate versioni di gioco e cache del service worker; URL dei due GLB modificati per evitare l’uso dei file difettosi in cache.
+- Mantenuti i potenziamenti e tutti gli altri contenuti della Alpha 0.7.
+
+INSTALLAZIONE: caricare su GitHub i file della nuova versione, mantenendo identica la struttura delle cartelle e sovrascrivendo i file precedenti. Verificare su Safari riaprendo il sito e, se necessario, cancellando i dati del sito o reinstallando la PWA.
+
+Nota: corrette le coordinate UV e validata la struttura dei file; la resa visiva sul dispositivo va verificata dall’utente.
