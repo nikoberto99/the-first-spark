@@ -70,3 +70,12 @@
   #asset-status{display:none}
 }
 @media (orientation:landscape) and (max-height:390px){.portrait{display:none}.dialog-top{font-size:8px}.dialog-card{padding:8px 18px}.loading-panel p{margin:10px 0}}
+
+/* Alpha 0.14 — transizione tra le due aree senza perdere potenziamenti */
+#area-transition{position:fixed;inset:0;z-index:110;background:radial-gradient(ellipse at center,#244d50 0%,#081c24 72%);color:#fff5da;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .42s ease;}
+#area-transition.active{opacity:1;pointer-events:all;}
+.area-transition-inner{text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;font-family:inherit;}
+.area-transition-inner strong{font-size:clamp(18px,3vw,30px);letter-spacing:.14em;text-shadow:0 3px 16px #000;}
+.area-transition-inner span{font-size:clamp(11px,1.7vw,16px);opacity:.84;}
+.transition-rune{font-size:48px;color:#b6ecdc;animation:portal-pulse 1.4s ease-in-out infinite alternate;}
+@keyframes portal-pulse{from{transform:scale(.8) rotate(-12deg);opacity:.6}to{transform:scale(1.15) rotate(12deg);opacity:1}}

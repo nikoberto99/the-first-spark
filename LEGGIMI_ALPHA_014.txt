@@ -1,0 +1,15 @@
+THE FIRST SPARK — ALPHA 0.14 | ISOLA GUIDATA E BOSS SEPARATO
+
+INSTALLAZIONE: estrai tutti i file dello ZIP nella radice del repository GitHub Pages, sovrascrivendo i precedenti. Verifica ALPHA 0.14 nella schermata di caricamento. Se compare una versione vecchia, chiudi la web app, riapri da Safari e aggiorna; il service worker usa una cache nuova.
+
+NOVITA':
+- Percorso continuo spiaggia -> foresta -> ponte sul fiume -> accampamento Goblin -> porta 3D.
+- Porta: attraversando la soglia del modello fort_open in fondo al campo (X~16,Z~-14.5) avviene una transizione verso l'area Boss separata.
+- Boss compare soltanto quando si entra nell'arena. Nessun reset di vita, frecce, monete o potenziamenti.
+- Arena indipendente, diametro di circa 32 unità, modello 3D in versione QUALITA'.
+- Ritorno possibile passando dal bordo sud dell'arena, vicino al segno luminoso di ingresso.
+- Rocce medie/piccole visibili vicino al sentiero, con collider solo sulle rocce abbastanza grandi.
+- Percorso delimitato da alberi, rocce e vegetazione; nessun collider assegnato all'erba decorativa.
+- Barca, comandi orizzontali, 30 secondi minimi di caricamento e combattimento conservati.
+
+VERIFICHE: sintassi JS, riferimenti dei modelli, integrità ZIP. Non è stata certificata la resa o fluidità su iPhone reale.

@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.13 | Collisioni, nuova barca e arena allineata
+/* THE FIRST SPARK — Alpha 0.14 | Isola guidata, ingresso 3D, boss in area separata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -96,14 +96,21 @@ function init(){
   const ground=mesh(new THREE.PlaneGeometry(150,150),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
   ground.rotation.x=-Math.PI/2;
   // Sentiero: UN'UNICA SUPERFICIE CURVA, non piu una fila di dischi sovrapposti.
-  const pathPts=[[-22,-1],[-17,-1.1],[-13,-.4],[-9,.8],[-5,1.5],[-1,.5],[3,.35],[7,1.4],[12,1.1],[17,.1],[22,-.7]];
+  // Alpha 0.14: UN PERCORSO leggibile dalla spiaggia alla soglia del Boss.
+  // Spiaggia -> bosco -> ponte sul fiume -> campo Goblin -> ingresso 3D.
+  const pathPts=[
+    [-17.0,12.1],[-16.2,9.0],[-14.2,5.7],[-12.8,2.2],
+    [-10.2,-2.0],[-6.5,-3.0],[-2.0,-.8],[1.0,.15],
+    [4.5,.7],[7.7,-1.0],[10.8,-3.0],[14.2,-4.7],
+    [16.0,-6.7],[16.0,-9.7],[16.0,-14.9]
+  ];
   const pathCurve=new THREE.CatmullRomCurve3(pathPts.map(p=>new V(p[0],0,p[1])),false,'catmullrom',.42);
   function pathSurface(){
     const p=[],col=[],ind=[],length=175,slices=8;
     const cg=new THREE.Color('#a9c897'),cm=new THREE.Color('#e3c99e'),ce=new THREE.Color('#cab18a');
     for(let i=0;i<=length;i++){
       const t=i/length,q=pathCurve.getPoint(t),dir=pathCurve.getTangent(t),n=new V(-dir.z,0,dir.x);
-      const width=1.38+.24*Math.sin(t*14)+.14*Math.sin(t*41);
+      const width=1.62+.18*Math.sin(t*14)+.12*Math.sin(t*41);
       for(let j=0;j<=slices;j++){
         const u=(j/slices-.5)*2,edge=Math.abs(u),w=u*width;
         p.push(q.x+n.x*w,.005-.015*edge,q.z+n.z*w);
@@ -116,23 +123,8 @@ function init(){
     mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,side:THREE.DoubleSide}),world,[0,0,0],[1,1,1],false);
   }
   pathSurface();
-  // Sentiero secondario: dall'approdo sulla spiaggia al percorso centrale.
-  const arrivalPath=new THREE.CatmullRomCurve3([
-    new V(-18.1,0,13.3),new V(-16.1,0,9.7),
-    new V(-14.6,0,5.8),new V(-11.6,0,2.8),new V(-9.0,0,.8)
-  ],false,'catmullrom',.45);
-  const beachTrailPositions=[],beachTrailIndices=[];
-  for(let i=0;i<=80;i++){
-    const t=i/80,p=arrivalPath.getPoint(t),d=arrivalPath.getTangent(t);
-    const nx=-d.z,nz=d.x,w=.82+.09*Math.sin(t*18);
-    beachTrailPositions.push(p.x-nx*w,.008,p.z-nz*w,p.x+nx*w,.008,p.z+nz*w);
-    if(i<80){const k=i*2;beachTrailIndices.push(k,k+2,k+1,k+1,k+2,k+3);}
-  }
-  const arrivalGeo=new THREE.BufferGeometry();
-  arrivalGeo.setAttribute('position',new THREE.Float32BufferAttribute(beachTrailPositions,3));
-  arrivalGeo.setIndex(beachTrailIndices);arrivalGeo.computeVertexNormals();
-  mesh(arrivalGeo,new THREE.MeshStandardMaterial({color:'#d9c29a',roughness:1,side:THREE.DoubleSide}),
-    world,[0,0,0],[1,1,1],false);
+  // Il sentiero principale parte direttamente dal punto di sbarco.
+  const arrivalPath=pathCurve;
   // Laghetto laterale con sponda e morbidi riflessi.
   const pond=new THREE.Group();pond.position.set(-10,0,9);world.add(pond);
   function flatEllipse(parent,material,radx,radz,y){const s=mesh(new THREE.CircleGeometry(1,60),material,parent,[0,y,0],[radx,radz,1],false);s.rotation.x=-Math.PI/2;return s}
@@ -243,7 +235,7 @@ function init(){
     for(let j=1;j<pathPts.length;j++){
       const a=pathPts[j-1],b=pathPts[j],dx=b[0]-a[0],dz=b[1]-a[1];
       const t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));
-      if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<1.65)return true;
+      if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<2.05)return true;
     }
     for(let j=0;j<=24;j++){
       const p=arrivalPath.getPoint(j/24);
@@ -258,7 +250,6 @@ function init(){
       Math.hypot((x+10)/4.2,(z-9)/3.1)>1.12 &&
       Math.abs(x-riverX)>2.3 &&
       Math.hypot((x-16)/8.5,(z+9)/7.6)>1 &&
-      Math.hypot((x-22)/19,(z+27)/18)>1 &&
       Math.hypot((x-9)/3.5,(z-1.45)/3.5)>1 &&
       !(x>14&&x<25&&z< -12&&z> -27&&Math.abs(x-(16+(z+12)*(-.37)))<2.0) &&
       !nearPath(x,z);
@@ -325,7 +316,7 @@ function init(){
     mushroom(x,z,.6+rand(i)*.8,i%2?m.flowers:m.blueFlower);
   }
   // Piccolo altare del cristallo, sempre visibile oltre il sentiero.
-  const altar=new THREE.Group();altar.position.set(9,.045,1.45);world.add(altar);
+  const altar=new THREE.Group();altar.position.set(170,.045,-3.2);world.add(altar);
   circularShadow(altar,0,0,1.8,.16);
   mesh(new THREE.CylinderGeometry(1.53,1.62,.18,48),mat('#99aca2'),altar,[0,.075,0]);
   mesh(new THREE.CylinderGeometry(1.18,1.30,.24,48),mat('#c1c5ac'),altar,[0,.27,0]);
@@ -413,39 +404,99 @@ function init(){
   // Segno dello scafo sulla sabbia; rende riconoscibile il punto d'approdo.
   terrainPatch(-20.6,16.1,2.85,1.35,mat('#d4b88c'),51,-.025);
 
-  // ALPHA 0.12: ARENA DEL BOSS GRANDE E LEGGIBILE.
-  // ~33 metri di diametro, collegata al campo goblin da un sentiero.
-  const bossArena=new THREE.Group();bossArena.name='Arena_del_Boss_Grande';
-  bossArena.position.set(22,0,-27);env.add(bossArena);
-  terrainPatch(22,-27,19.0,18.0,mat('#728d6d'),44,-.041);
-  terrainPatch(22,-27,17.3,16.3,mat('#b7a98c'),45,-.028);
-  terrainPatch(22,-27,15.8,14.7,mat('#9ba88d'),46,-.014);
-  const arenaRing=mesh(new THREE.RingGeometry(15.7,16.35,96),
-    mat('#777e74',.98,{side:THREE.DoubleSide}),bossArena,[0,.016,0],[1,.91,1],false);
+  // Alpha 0.14: la battaglia ha un'area autonoma, molto lontana dalla mappa.
+  // La distanza consente al frustum culling di non disegnare il campo Goblin
+  // mentre il giocatore combatte il Boss (senza ricaricare la pagina).
+  const BOSS_X=170,BOSS_Z=0;
+  const flames=[];
+  const bossArena=new THREE.Group();bossArena.name='Area_separata_Boss_Goblin';
+  bossArena.position.set(BOSS_X,0,BOSS_Z);env.add(bossArena);
+  const bossGround=mesh(new THREE.CircleGeometry(24,96),mat('#637a65'),bossArena,[0,-.08,0],[1,1,1],false);
+  bossGround.rotation.x=-Math.PI/2;
+  const bossGround2=mesh(new THREE.CircleGeometry(18.2,96),mat('#a9a18b'),bossArena,[0,-.04,0],[1,1,1],false);
+  bossGround2.rotation.x=-Math.PI/2;
+  const bossGround3=mesh(new THREE.CircleGeometry(15.45,96),mat('#a9ae9c'),bossArena,[0,-.022,0],[1,1,1],false);
+  bossGround3.rotation.x=-Math.PI/2;
+  const arenaRing=mesh(new THREE.RingGeometry(15.55,16.30,96),
+    mat('#777e74',.98,{side:THREE.DoubleSide}),bossArena,[0,.016,0],[1,.93,1],false);
   arenaRing.rotation.x=-Math.PI/2;
   const arenaMarkerStones=[];
-  for(let i=0;i<18;i++){
-    const a=i*Math.PI*2/18;
-    if(a>1.05&&a<2.15)continue; // apertura verso il campo
-    const x=Math.cos(a)*16.25,z=Math.sin(a)*15.25;
-    const stone=mesh(new THREE.CylinderGeometry(.37,.45,.40,7),em.darkStone,bossArena,[x,.16,z],[1,1,1],false);
+  for(let i=0;i<24;i++){
+    const a=i*Math.PI*2/24;
+    if(a>1.28&&a<1.86)continue; // apertura di arrivo a sud
+    const x=Math.cos(a)*16.0,z=Math.sin(a)*15.2;
+    const stone=mesh(new THREE.CylinderGeometry(.46,.52,.70,7),em.darkStone,bossArena,[x,.30,z],[1,1,1],false);
     stone.rotation.y=a;arenaMarkerStones.push(stone);
   }
-  const bossTrailCurve=new THREE.CatmullRomCurve3([
-    new V(16,0,-12.0),new V(17.0,0,-16.0),new V(18.8,0,-19.6),
-    new V(20.8,0,-20.2),new V(22,0,-22.0)
-  ],false,'catmullrom',.48);
-  const btP=[],btI=[];
-  for(let i=0;i<=80;i++){
-    const t=i/80,q=bossTrailCurve.getPoint(t),d=bossTrailCurve.getTangent(t);
-    const nx=-d.z,nz=d.x,w=1.22;
-    btP.push(q.x-nx*w,.012,q.z-nz*w,q.x+nx*w,.012,q.z+nz*w);
-    if(i<80){const j=i*2;btI.push(j,j+2,j+1,j+1,j+2,j+3)}
+  // Torce decorative: luce emissiva, senza decine di luci dinamiche.
+  for(let i=0;i<12;i++){
+    const a=i*2*Math.PI/12,x=Math.cos(a)*15.5,z=Math.sin(a)*14.8;
+    mesh(new THREE.CylinderGeometry(.21,.30,1.2,7),em.darkStone,bossArena,[x,.58,z],[1,1,1],false);
+    const flame=mesh(new THREE.ConeGeometry(.19,.48,8),em.flame,bossArena,[x,1.38,z],[1,1,1],false);
+    flames.push({mesh:flame,phase:i*.64});
   }
-  const btG=new THREE.BufferGeometry();
-  btG.setAttribute('position',new THREE.Float32BufferAttribute(btP,3));
-  btG.setIndex(btI);btG.computeVertexNormals();
-  mesh(btG,mat('#b9a487',1,{side:THREE.DoubleSide}),env,[0,0,0],[1,1,1],false);
+  // Percorso finale dal falò alla vera soglia del modello 3D.
+  const gateTrail=new THREE.Group();gateTrail.name='Sentiero_porta_del_Boss';env.add(gateTrail);
+  for(let i=0;i<10;i++){
+    const z=-10.3-i*.54;
+    const tile=mesh(new THREE.BoxGeometry(2.5,.045,.48),i%3?em.sand:em.earthLight,
+      gateTrail,[16,.007,z],[1,1,1],false);
+    tile.rotation.y=(i%2?.02:-.02);
+  }
+  // Luce nella soglia: il trigger e' il passaggio reale del mago oltre la porta.
+  const gatewayGlow=mesh(new THREE.PlaneGeometry(2.9,3.6),
+    new THREE.MeshBasicMaterial({color:'#87d4c6',transparent:true,opacity:.15,
+      depthWrite:false,side:THREE.DoubleSide}),env,[16,1.9,-14.9],[1,1,1],false);
+  // Piano verticale orientato verso chi arriva dall'accampamento.
+  gatewayGlow.rotation.y=0;
+  const arrivalMark=mesh(new THREE.RingGeometry(1.15,1.27,40),
+    new THREE.MeshBasicMaterial({color:'#8be2d3',transparent:true,opacity:.65,
+      depthWrite:false,side:THREE.DoubleSide}),bossArena,[0,.028,11.6],[1,1,1],false);
+  arrivalMark.rotation.x=-Math.PI/2;
+
+  // Bordo naturale del percorso: ciuffi di arbusti bassi, solo decorativi.
+  // I cespugli NON generano collider: il mago non si blocca nell'erba.
+  const pathShrubGeometry=new THREE.IcosahedronGeometry(.42,0);
+  const pathShrubMaterial=mat('#739c69');
+  const pathShrubs=new THREE.InstancedMesh(pathShrubGeometry,pathShrubMaterial,110);
+  const shrubTransform=new THREE.Object3D();
+  for(let i=0;i<110;i++){
+    const t=.10+(i%55)/55*.68;
+    const q=pathCurve.getPoint(t),d=pathCurve.getTangent(t);
+    const side=i<55?-1:1;
+    const offset=3.6+rand(i*13)*1.4;
+    const x=q.x-d.z*side*offset,z=q.z+d.x*side*offset;
+    const riverX=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+    if(Math.abs(x-riverX)<2.4||Math.hypot((x+10)/4.2,(z-9)/3.1)<1.2){
+      shrubTransform.position.set(0,-100,0);shrubTransform.scale.setScalar(0);
+    }else{
+      const r=.6+rand(i*31)*.55;
+      shrubTransform.position.set(x,.19*r,z);
+      shrubTransform.scale.set(r,.55*r,.86*r);
+    }
+    shrubTransform.rotation.y=rand(i*7)*6.283;
+    shrubTransform.updateMatrix();pathShrubs.setMatrixAt(i,shrubTransform.matrix);
+  }
+  pathShrubs.castShadow=false;pathShrubs.receiveShadow=false;
+  env.add(pathShrubs);
+  // Piccoli cartelli che rendono distinguibili le tappe, senza nuovi file.
+  function areaSign(x,z,label,angle=0){
+    const group=new THREE.Group();group.position.set(x,0,z);group.rotation.y=angle;env.add(group);
+    mesh(new THREE.CylinderGeometry(.075,.10,1.4,7),em.woodDark,group,[0,.70,0],[1,1,1],false);
+    const wood=mesh(new THREE.BoxGeometry(1.45,.53,.12),em.wood,group,[0,1.32,0],[1,1,1],false);
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=192;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#f5e6bc';ctx.font='bold 56px Georgia,serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,256,95,490);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const labelPlane=mesh(new THREE.PlaneGeometry(1.36,.48),
+      new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false}),
+      group,[0,1.32,.067],[1,1,1],false);
+    labelPlane.renderOrder=1;
+    return group;
+  }
+  areaSign(-18.9,5.0,'FORESTA',-.12);
+  areaSign(10.9,-1.3,'CAMPO GOBLIN',.10);
+  areaSign(18.3,-11.5,'BOSS',-.08);
 
   // Fiume sinuoso: letto, rive e superficie traslucida. Il sentiero lo attraversa.
   function riverStrip(width,material,y,phase){
@@ -624,7 +675,6 @@ function init(){
   barrel(camp,-3.8,-3.0);barrel(camp,-3.2,-3.1,.76);
   crate(camp,3.7,-2.5,1);crate(camp,3.0,-3.1,.73);crate(camp,2.9,-2.1,.59);
   // Falò, pietre e ceppi; le fiamme si muovono nel ciclo di animazione.
-  const flames=[];
   function firepit(parent,x,z,size=1){
     const f=new THREE.Group();f.position.set(x,0,z);f.scale.setScalar(size);parent.add(f);
     for(let i=0;i<9;i++){
@@ -643,7 +693,7 @@ function init(){
   firepit(camp,0,-.35,.87);
   // Falò centrale visibile, anche dopo la sostituzione degli edifici provvisori.
   const campSquare=new THREE.Group();campSquare.name='Piazza_centrale_goblin';
-  campSquare.position.set(16,0,-8.4);env.add(campSquare);
+  campSquare.position.set(12.6,0,-8.4);env.add(campSquare);
   firepit(campSquare,0,0,1.15);
   for(let i=0;i<4;i++){
     const a=i*Math.PI/2+.35;
@@ -783,7 +833,7 @@ function init(){
   let enemyLoader=null;
   let criticalAssetsReady=false;
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0130',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0140',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -867,15 +917,15 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0130',
-    fort_closed:'./assets/fort_closed.glb?v=0130',
-    goblin_tower:'./assets/goblin_tower.glb?v=0130',
-    goblin_tent:'./assets/goblin_tent.glb?v=0130',
-    goblin_fence:'./assets/goblin_fence.glb?v=0130',
-    boat:'./assets/boat.glb?v=0130',palm:'./assets/palm.glb?v=0130',
-    pine:'./assets/pine.glb?v=0130',tree:'./assets/tree.glb?v=0130',
-    rock_mid:'./assets/rock_mid.glb?v=0130',
-    bow:'./assets/bow.glb?v=0130',dagger:'./assets/dagger.glb?v=0130',mace:'./assets/mace.glb?v=0130'
+    fort_open:'./assets/fort_open.glb?v=0140',
+    fort_closed:'./assets/fort_closed.glb?v=0140',
+    goblin_tower:'./assets/goblin_tower.glb?v=0140',
+    goblin_tent:'./assets/goblin_tent.glb?v=0140',
+    goblin_fence:'./assets/goblin_fence.glb?v=0140',
+    boat:'./assets/boat.glb?v=0140',palm:'./assets/palm.glb?v=0140',
+    pine:'./assets/pine.glb?v=0140',tree:'./assets/tree.glb?v=0140',
+    rock_mid:'./assets/rock_mid.glb?v=0140',
+    bow:'./assets/bow.glb?v=0140',dagger:'./assets/dagger.glb?v=0140',mace:'./assets/mace.glb?v=0140'
   };
   // [modello, posizione X/Y/Z, altezza, rotazione Y]
   // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
@@ -888,7 +938,7 @@ function init(){
     // recinzione perimetrale con varco centrale libero.
     ['fort_open',[16,0,-14.5],5.8,0],
     // La fortezza circolare è allineata al centro della grande arena.
-    ['fort_closed',[22,0,-27],6.0,0],
+    ['fort_closed',[170,0,0],6.0,0],
     ['goblin_tower',[9.4,0,-13.4],3.5,.08],
     ['goblin_tower',[22.6,0,-13.4],3.5,-.08],
     ['goblin_tent',[11.6,0,-7.5],2.05,.12],
@@ -897,36 +947,30 @@ function init(){
     ['goblin_fence',[23.0,0,-6.6],2.15,Math.PI/2],
     ['goblin_fence',[11.4,0,-2.5],2.15,0],
     ['goblin_fence',[20.6,0,-2.5],2.15,0],
-    ['rock_mid',[-13.8,0,7.1],0.58,0.3],
-    ['rock_mid',[-7.2,0,6.8],0.48,2.1],
-    ['rock_mid',[-7.7,0,11.7],0.37,1.1],
-    ['rock_mid',[-11.5,0,12.3],0.34,0.2],
-    ['rock_mid',[-13.1,0,10.7],0.23,2.5],
-    ['rock_mid',[-6.3,0,9.8],0.2,0.9],
-    ['rock_mid',[-16.1,0,10.3],0.45,2.2],
-    ['rock_mid',[-21.7,0,17.2],0.27,0.6],
-    ['rock_mid',[-18.3,0,22.0],0.38,1.8],
-    ['rock_mid',[-19.0,0,9.1],0.17,1.1],
-    ['rock_mid',[-12.8,0,-8.7],0.64,2.5],
-    ['rock_mid',[-18.3,0,-16.4],0.52,0.9],
-    ['rock_mid',[-9.4,0,-13.2],0.44,1.9],
-    ['rock_mid',[-22.0,0,-11.3],0.24,0.1],
-    ['rock_mid',[-8.3,0,-20.2],0.28,1.7],
-    ['rock_mid',[-14.4,0,-19.8],0.23,2.9],
-    ['rock_mid',[-3.0,0,-9.4],0.35,0.8],
-    ['rock_mid',[-1.6,0,-16.2],0.22,2.1],
-    ['rock_mid',[11.0,0,11.0],0.6,0.2],
-    ['rock_mid',[16.5,0,11.4],0.43,1.3],
-    ['rock_mid',[21.7,0,16.4],0.57,2.1],
-    ['rock_mid',[11.5,0,18.1],0.25,0.4],
-    ['rock_mid',[18.2,0,20.7],0.31,2.9],
-    ['rock_mid',[22.8,0,8.1],0.21,1.7],
-    ['rock_mid',[7.7,0,18.3],0.18,0.5],
-    ['rock_mid',[22.6,0,-3.5],0.37,2.4],
-    ['rock_mid',[-5.1,0,-4.2],0.25,0.8],
-    ['rock_mid',[-14.3,0,-3.2],0.22,1.6],
-    ['rock_mid',[0.1,0,8.5],0.32,0.4],
-    ['rock_mid',[-3.1,0,13.8],0.18,1.3],
+    ['rock_mid',[-19.8,0,8.1],1.0,0.3],
+    ['rock_mid',[-21.5,0,11.1],0.7,1.4],
+    ['rock_mid',[-13.5,0,10.4],0.52,2.0],
+    ['rock_mid',[-18.2,0,4.3],1.2,0.6],
+    ['rock_mid',[-17.8,0,-1.3],1.05,2.2],
+    ['rock_mid',[-15.8,0,-4.0],0.66,0.9],
+    ['rock_mid',[-11.0,0,-7.4],1.42,1.7],
+    ['rock_mid',[-7.6,0,-7.5],0.88,2.9],
+    ['rock_mid',[-5.4,0,1.0],0.83,0.8],
+    ['rock_mid',[-2.1,0,4.0],1.13,2.0],
+    ['rock_mid',[1.0,0,5.0],0.86,0.4],
+    ['rock_mid',[0.5,0,-5.0],1.27,2.6],
+    ['rock_mid',[7.8,0,5.0],1.07,1.3],
+    ['rock_mid',[9.4,0,-6.9],1.15,2.2],
+    ['rock_mid',[11.6,0,-8.8],0.63,0.4],
+    ['rock_mid',[22.7,0,-2.4],1.02,1.1],
+    ['rock_mid',[25.0,0,-9.2],0.72,2.7],
+    ['rock_mid',[-21.5,0,20.8],0.65,0.3],
+    ['rock_mid',[-8.5,0,-13.6],1.22,0.8],
+    ['rock_mid',[-19.5,0,-12.0],0.92,1.5],
+    ['rock_mid',[-4.1,0,-14.1],0.8,2.5],
+    ['rock_mid',[12.3,0,10.0],1.13,0.5],
+    ['rock_mid',[21.7,0,9.2],1.05,2.3],
+    ['rock_mid',[14.3,0,21.0],0.72,0.8],
     ['boat',[-20.6,.035,16.1],1.10,.18],
     ['palm',[-21.7,0,18.2],4.45,.25],
     ['palm',[-15.2,0,18.9],4.75,1.62],
@@ -944,7 +988,18 @@ function init(){
     ['tree',[22.0,0,20.2],5.0,2.6],
     ['tree',[10.6,0,20.4],4.8,.55],
     ['tree',[20.2,0,8.7],5.35,1.25],
-    ['tree',[10.5,0,12.4],4.95,3.05]
+    ['tree',[10.5,0,12.4],4.95,3.05],
+    // I due lati del percorso nel bosco sono leggibili e riconoscibili.
+    ['pine',[-19.0,0,1.0],5.15,.7],
+    ['pine',[-15.6,0,-8.0],5.50,1.6],
+    ['pine',[-11.4,0,-9.5],5.25,2.4],
+    ['pine',[-6.1,0,-9.3],5.0,.2],
+    ['pine',[-9.0,0,5.2],4.8,2.1],
+    ['tree',[-3.1,0,5.7],5.15,.9],
+    ['tree',[0.1,0,-7.2],5.35,1.9],
+    ['tree',[8.5,0,6.0],5.1,2.4],
+    ['tree',[10.3,0,-9.8],5.1,.4],
+    ['tree',[24.8,0,-5.3],5.0,1.2]
   ];
   // Alpha 0.13: collisioni leggere indipendenti dai poligoni GLB.
   // Cerchi per tronchi/rocce, rettangoli orientati per edifici e recinti.
@@ -961,7 +1016,7 @@ function init(){
     else if(key==='pine')addCircle(x,z,.52);
     else if(key==='tree')addCircle(x,z,.62);
     else if(key==='palm')addCircle(x,z,.43);
-    else if(key==='rock_mid')addCircle(x,z,Math.max(.22,height*.55));
+    else if(key==='rock_mid'&&height>=.60)addCircle(x,z,Math.max(.24,height*.44));
     else if(key==='goblin_tower')addCircle(x,z,1.05);
     else if(key==='goblin_tent')addBox(x,z,1.02,1.02,angle);
     else if(key==='goblin_fence')addBox(x,z,1.74,.25,angle);
@@ -974,6 +1029,18 @@ function init(){
     // fort_closed: collisione circolare con apertura, gestita sotto.
   }
   function collisionAt(x,z,r=.37,includeEnemies=false){
+    if(currentArea==='boss'){
+      const dx=x-BOSS_X,dz=z-BOSS_Z;
+      // Arena circolare con bordo solido: entrata e uscita tramite porta.
+      if(Math.hypot(dx/1.0,dz/.94)>15.15-r)return true;
+      if(includeEnemies){
+        for(const e of enemies){
+          if(e.userData.kind!=='boss')continue;
+          if(Math.hypot(x-e.position.x,z-e.position.z)<r+1.12)return true;
+        }
+      }
+      return false;
+    }
     // Costa ovest: il personaggio non entra nel mare.
     if(z>3&&z<30){
       const coastEdge=-23.6+.55*Math.sin(z*.42)+.18*Math.cos(z*.85);
@@ -987,13 +1054,7 @@ function init(){
       const bridgePass=Math.abs(z-.7)<1.52;
       if(Math.abs(x-riverX)<1.30+r&&!bridgePass)return true;
     }
-    // Muro dell'arena Boss: passaggio a sud (z maggiore), verso il campo.
-    const ax=x-22,az=z+27;
-    const ar=Math.hypot(ax/1.0,az/0.93);
-    if(ar>15.0-r&&ar<16.2+r){
-      const a=Math.atan2(az,ax);
-      if(!(a>1.06&&a<2.18))return true;
-    }
+    // L'arena e' una mappa indipendente: non usare i collider del bosco.
     for(const c of solidCircles){
       const dx=x-c.x,dz=z-c.z,R=c.r+r;
       if(dx*dx+dz*dz<R*R)return true;
@@ -1016,7 +1077,7 @@ function init(){
   }
   // Quattro colonne delle rovine e falò centrale: solidi anche senza GLB.
   for(const [x,z] of [[6.8,-.15],[11.1,-.2],[6.8,3.2],[11.2,3.35]])addCircle(x,z,.42);
-  addCircle(16,-8.4,.62);
+  addCircle(12.6,-8.4,.62);
   // Scivolamento: tenta la diagonale, poi i due assi separati.
   // Sottopassi per evitare di attraversare oggetti con dt variabile.
   function moveWithCollision(object,dx,dz,r=.37,checkEnemies=false){
@@ -1070,6 +1131,7 @@ function init(){
           if(name!==key)continue;
           const instance=scene.clone(true),holder=new THREE.Group();
           holder.position.set(...pos);holder.rotation.y=rotation;
+          if(key==='rock_mid')holder.position.y=.055;
           // L'altezza indicata nello slot ora si applica a TUTTI i modelli.
           // Nella 0.10 solo le rocce erano scalate: la roccaforte del Boss
           // rimaneva minuscola anche modificando l'altezza nella tabella.
@@ -1078,7 +1140,9 @@ function init(){
             // Il GLB e una vera arena ad anello, non un edificio sullo sfondo.
             // Base normalizzata: X ~11.1, Z ~13.8; adattata a ~30 x 30.
             holder.scale.set(2.70,1.0,2.17);
-            arenaRing.visible=false;
+            // La ring resta visibile sotto le mura come riferimento di confine.
+            arenaRing.material.opacity=.32;
+            arenaRing.material.transparent=true;
             for(const marker of arenaMarkerStones)marker.visible=false;
           }
           holder.add(instance);
@@ -1099,6 +1163,16 @@ function init(){
       loadedAssets.add(key);updateAssetStatus();
     }catch(err){
       console.warn('Asset facoltativo non caricato:',key,err);
+      if(key==='rock_mid'){
+        // Rocce di emergenza se il GLB non viene caricato dal browser.
+        for(const [name,pos,height,rotation] of environmentSlots){
+          if(name!=='rock_mid')continue;
+          const stone=mesh(new THREE.DodecahedronGeometry(.7,0),em.slate,world,
+            [pos[0],height*.33,pos[2]],[height*.78,height*.53,height*.65],false);
+          stone.rotation.y=rotation;
+          registerModelCollision(key,pos,height,rotation);
+        }
+      }
       if(key==='boat'){
         // Non lasciare mai la spiaggia vuota se il download GLB fallisce.
         const fallback=new THREE.Group();fallback.name='Barca_emergenza';
@@ -1153,7 +1227,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0130',goblin:'./goblin-ottimizzato.glb?v=0130',boss:'./assets/boss.glb?v=0130'};
+    const paths={slime:'./slime-verde.glb?v=0140',goblin:'./goblin-ottimizzato.glb?v=0140',boss:'./assets/boss.glb?v=0140'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -1203,6 +1277,30 @@ function init(){
   const origins=[[-12.5,4.1],[-7.2,2.4],[-.6,2.5],[8.1,-1.9],[13.2,-5.4]];
   origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
   let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0,winTimer=-1;
+  let currentArea='island',portalCooldown=0,bossSpawned=false;
+  const areaTransition=$('#area-transition');
+  function transitionArea(target){
+    if(state!=='playing'||portalCooldown>0)return;
+    state='transition';portalCooldown=2.5;
+    if(areaTransition){areaTransition.classList.add('active');
+      areaTransition.querySelector('strong').textContent=target==='boss'?'LA FORTEZZA DEL BOSS':'RITORNO ALL’ACCAMPAMENTO';
+      areaTransition.querySelector('span').textContent=target==='boss'?'Preparazione dello scontro…':'Ritorno alla prima isola…';}
+    setTimeout(()=>{
+      currentArea=target;
+      if(target==='boss'){
+        hero.root.position.set(BOSS_X,0,BOSS_Z+11.3);
+        if(!bossSpawned){const boss=bossGoblin(BOSS_X,BOSS_Z-3.5,89);enemies.push(boss);bossSpawned=true;}
+        stage=2;toast('IL BOSS GOBLIN TI ATTENDE!',3.0);
+      }else{
+        hero.root.position.set(16,0,-11.5);
+        toast('SEI TORNATO ALL’ACCAMPAMENTO',2.2);
+      }
+      camera.position.copy(hero.root.position).add(cameraOffset);
+      camLook.copy(hero.root.position).add(new V(0,.8,0));
+      updateHud();
+      setTimeout(()=>{if(areaTransition)areaTransition.classList.remove('active');state='playing';},450);
+    },520);
+  }
   let level=1,xp=0,maxHealth=100,damage=1,fireRate=1,moveSpeed=4.15,
       extraArrows=0,pierce=0,regeneration=0,stage=1,element='arcana',upgradeQueue=0;
   const upgradeLevels={};
@@ -1266,9 +1364,9 @@ function init(){
   function toast(t,sec=2){$('#toast').textContent=t;toastTime=sec}
   function updateHud(){
     $('#hpbar').style.width=(health/maxHealth*100)+'%';$('#hptext').textContent=Math.ceil(health)+' / '+maxHealth+' HP';
-    $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent=stage===1?'Nemici '+Math.min(kills,5)+' / 5':stage===2?'BOSS GOBLIN':'BOSS SCONFITTO';
+    $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent=stage===1?'Nemici '+Math.min(kills,5)+' / 5':stage===2?(currentArea==='boss'?'BOSS GOBLIN':'PORTA DEL BOSS'):'BOSS SCONFITTO';
     $('#level').textContent='Livello '+level;$('#xpbar').style.width=(xp/xpNeeded()*100)+'%';
-    $('#quest-text').textContent=stage===1?'Sconfiggi 5 nemici e ottieni potenziamenti':stage===2?'Sconfiggi il Boss Goblin':'Il cristallo si è risvegliato!';
+    $('#quest-text').textContent=currentArea==='boss'?'Sconfiggi il Boss Goblin!':stage===1?'Esplora la foresta, libera il campo e raggiungi la porta':stage===2?'Attraversa la porta 3D del Boss':'Il cristallo si è risvegliato!';
   }
   function showDialog(title,detail,button='CONTINUA'){
     $('#dialog').classList.add('visible');$('#dialog-text').innerHTML=detail;
@@ -1284,6 +1382,8 @@ function init(){
     origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
     for(const a of arrows)removeArrow(a);arrows.length=0;
     for(const a of sparks)world.remove(a.mesh);sparks.length=0;
+    currentArea='island';bossSpawned=false;portalCooldown=0;
+    if(areaTransition)areaTransition.classList.remove('active');
     hero.root.position.set(-17.0,0,12.1);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
     damage=1;fireRate=1;moveSpeed=4.15;extraArrows=0;pierce=0;regeneration=0;
     stage=1;element='arcana';upgradeQueue=0;Object.keys(upgradeLevels).forEach(k=>delete upgradeLevels[k]);
@@ -1367,9 +1467,9 @@ function init(){
     }
     gainXp(kind==='goblin'?20:12);
     if(stage===1&&kills>=5){
-      stage=2;const boss=bossGoblin(22,-27,89);enemies.push(boss);
-      // Il boss arriva dopo i cinque nemici iniziali.
-      toast('BOSS GOBLIN! SEGUI IL SENTIERO VERSO SUD-EST!',5);updateHud();
+      stage=2;
+      // La battaglia comincia solo oltrepassando il portale 3D.
+      toast('ACCAMPAMENTO LIBERATO! ATTRAVERSA LA PORTA DEL BOSS!',5);updateHud();
     }
   }
   function hurt(e,a){
@@ -1406,6 +1506,20 @@ function init(){
   function updateMiniMap(dt){
     miniClock+=dt;if(!miniCtx||miniClock<.18)return;miniClock=0;
     const c=miniCtx,W=c.canvas.width,H=c.canvas.height;
+    if(currentArea==='boss'){
+      c.clearRect(0,0,W,H);c.fillStyle='#5d755f';c.fillRect(0,0,W,H);
+      c.fillStyle='#ada48f';c.beginPath();c.arc(W/2,H/2,55,0,Math.PI*2);c.fill();
+      c.strokeStyle='#625d51';c.lineWidth=8;c.stroke();
+      c.fillStyle='#d15e4b';c.beginPath();c.arc(W/2,H/2-12,6,0,Math.PI*2);c.fill();
+      const hx=W/2+(hero.root.position.x-BOSS_X)*3.3;
+      const hz=H/2+(hero.root.position.z-BOSS_Z)*3.3;
+      c.fillStyle='#fff4c8';c.strokeStyle='#215e91';c.lineWidth=2;
+      c.beginPath();c.arc(hx,hz,5,0,Math.PI*2);c.fill();c.stroke();
+      if(lastRegion!=='ARENA DEL BOSS GOBLIN'){
+        $('#region-name').textContent='ARENA DEL BOSS GOBLIN';lastRegion='ARENA DEL BOSS GOBLIN';
+      }
+      return;
+    }
     const mapX=x=>(x+45)/90*W,mapY=z=>(z+62)/110*H;
     c.clearRect(0,0,W,H);c.fillStyle='#a7c393';c.fillRect(0,0,W,H);
     // Piccoli gruppi di alberi: indizi geografici, non una seconda scena 3D.
@@ -1424,8 +1538,7 @@ function init(){
     }c.stroke();
     c.fillStyle='#9b7050';c.fillRect(mapX(16)-10,mapY(-9)-8,20,16);
     c.strokeStyle='#624d37';c.lineWidth=2;c.strokeRect(mapX(16)-10,mapY(-9)-8,20,16);
-    c.fillStyle='#988c7a';c.beginPath();c.ellipse(mapX(22),mapY(-27),20,17,0,0,Math.PI*2);c.fill();
-    c.strokeStyle='#e2c99c';c.lineWidth=2;c.stroke();
+    c.fillStyle='#394c4b';c.fillRect(mapX(16)-5,mapY(-14.5)-4,10,7);
     c.fillStyle='#e9d4a7';c.beginPath();c.ellipse(mapX(-20),mapY(14),13,12,0,0,Math.PI*2);c.fill();
     c.fillStyle='#e3caa0';c.fillRect(mapX(4.5)-6,mapY(.7)-3,12,6);
     c.fillStyle='#b7e4ef';c.beginPath();c.arc(mapX(9),mapY(1.45),5,0,Math.PI*2);c.fill();
@@ -1433,7 +1546,7 @@ function init(){
     const px=mapX(hero.root.position.x),py=mapY(hero.root.position.z);
     c.fillStyle='#fff4c8';c.strokeStyle='#215e91';c.lineWidth=2.3;c.beginPath();c.arc(px,py,4.3,0,Math.PI*2);c.fill();c.stroke();
     let region='BOSCO DEL RISVEGLIO';
-    if(Math.hypot(hero.root.position.x-22,hero.root.position.z+27)<17)region='ARENA DEL BOSS GOBLIN';
+    if(Math.hypot(hero.root.position.x-16,hero.root.position.z+14.5)<3)region='PORTA DEL BOSS';
     else if(Math.hypot(hero.root.position.x-16,hero.root.position.z+9)<8)region='AVAMPOSTO GOBLIN';
     else if(Math.hypot(hero.root.position.x-9,hero.root.position.z-1.45)<4)region='ROVINE DEL CRISTALLO';
     else if(hero.root.position.x< -15&&hero.root.position.z>5)region='SPIAGGIA DEL NAUFRAGIO';
@@ -1478,8 +1591,10 @@ function init(){
         const vx=(mx+my)*Math.SQRT1_2,vz=(my-mx)*Math.SQRT1_2;
         const oldX=hero.root.position.x,oldZ=hero.root.position.z;
         moveWithCollision(hero.root,vx*moveSpeed*dt*strength,vz*moveSpeed*dt*strength,PLAYER_RADIUS,true);
-        hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x,-39,39);
-        hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z,-46,41);
+        if(currentArea==='island'){
+          hero.root.position.x=THREE.MathUtils.clamp(hero.root.position.x,-39,39);
+          hero.root.position.z=THREE.MathUtils.clamp(hero.root.position.z,-46,41);
+        }
         if(Math.hypot(hero.root.position.x-oldX,hero.root.position.z-oldZ)<.0001)hero.motion.position.y=.02;
         facing.set(vx,0,vz);hero.motion.position.y=.045+Math.sin(elapsed*13)*.04;
         hero.legs[0].rotation.x=Math.sin(elapsed*12)*.20;
@@ -1489,6 +1604,16 @@ function init(){
         hero.motion.position.y=THREE.MathUtils.lerp(hero.motion.position.y,Math.sin(elapsed*2.5)*.021,dt*8);
         for(const leg of hero.legs)leg.rotation.x*=.8;
         hero.arms[0].rotation.x*=.82;
+      }
+      // La porta del Boss e' il modello 3D in fondo al campo:
+      // il trigger scatta solo attraversando la sua soglia, non toccando un'icona.
+      portalCooldown=Math.max(0,portalCooldown-dt);
+      if(currentArea==='island'&&Math.abs(hero.root.position.x-16)<1.6&&
+         hero.root.position.z< -14.55&&hero.root.position.z> -18.5){
+        transitionArea('boss');
+      }else if(currentArea==='boss'&&Math.abs(hero.root.position.x-BOSS_X)<2.2&&
+               hero.root.position.z>BOSS_Z+13.1){
+        transitionArea('island');
       }
       cooldown=Math.max(0,cooldown-dt);
       if(regeneration>0&&health<maxHealth){health=Math.min(maxHealth,health+regeneration*dt);updateHud();}
@@ -1564,8 +1689,8 @@ function init(){
     camLook.lerp(target,Math.min(1,dt*6));camera.lookAt(camLook);
     // L'arena del Boss occupa ~33 metri: quando ci si avvicina la
     // telecamera si allarga gradualmente per mostrarne l'estensione.
-    const arenaDistance=Math.hypot(hero.root.position.x-22,hero.root.position.z+27);
-    const arenaBlend=1-THREE.MathUtils.smoothstep(arenaDistance,13,26);
+    const arenaDistance=Math.hypot(hero.root.position.x-BOSS_X,hero.root.position.z-BOSS_Z);
+    const arenaBlend=currentArea==='boss'?1:0;
     const spanTarget=THREE.MathUtils.lerp(normalCameraSpan,17.5,arenaBlend);
     const nextSpan=THREE.MathUtils.lerp(camera.top,spanTarget,Math.min(1,dt*2.2));
     if(Math.abs(nextSpan-camera.top)>.001){
@@ -1580,5 +1705,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0130').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0140').catch(()=>{});
 }
