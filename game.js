@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.14 | Isola guidata, ingresso 3D, boss in area separata
+/* THE FIRST SPARK — Alpha 0.15 | Isola guidata, ingresso 3D, boss in area separata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -96,7 +96,7 @@ function init(){
   const ground=mesh(new THREE.PlaneGeometry(150,150),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
   ground.rotation.x=-Math.PI/2;
   // Sentiero: UN'UNICA SUPERFICIE CURVA, non piu una fila di dischi sovrapposti.
-  // Alpha 0.14: UN PERCORSO leggibile dalla spiaggia alla soglia del Boss.
+  // Alpha 0.15: UN PERCORSO leggibile dalla spiaggia alla soglia del Boss.
   // Spiaggia -> bosco -> ponte sul fiume -> campo Goblin -> ingresso 3D.
   const pathPts=[
     [-17.0,12.1],[-16.2,9.0],[-14.2,5.7],[-12.8,2.2],
@@ -324,9 +324,23 @@ function init(){
   for(let i=0;i<8;i++){
     const t=i*Math.PI/4;ball(altar,m.rune,[Math.cos(t)*1.0,.405,Math.sin(t)*1],[.072,.08,.072],true,false);
   }
-  const centerCrystal=new THREE.Group();centerCrystal.position.set(0,1.1,0);altar.add(centerCrystal);
-  const crystalMesh=mesh(new THREE.OctahedronGeometry(.37,0),m.crystal,centerCrystal);
-  const glow=new THREE.PointLight('#84efff',0,3.1);glow.position.set(0,.35,0);centerCrystal.add(glow);
+  // Primo dei dieci amuleti unici. Galleggia dopo la sconfitta e
+  // la vittoria si attiva SOLTANTO quando il mago lo raccoglie.
+  const centerCrystal=new THREE.Group();centerCrystal.position.set(0,1.48,0);altar.add(centerCrystal);
+  const amuletGold=mat('#f3c66b',.25,{metalness:.7,emissive:'#6b4312',emissiveIntensity:.23});
+  const amuletGem=mat('#6debd1',.17,{metalness:.2,emissive:'#13a8a2',emissiveIntensity:.95});
+  const amuletRing=mesh(new THREE.TorusGeometry(.42,.11,12,36),amuletGold,centerCrystal,[0,0,0],[1,1,1],false);
+  mesh(new THREE.OctahedronGeometry(.29,0),amuletGem,centerCrystal,[0,0,.08],[1,1,1],false);
+  for(let i=0;i<5;i++){
+    const a=i*Math.PI*2/5;
+    const tip=mesh(new THREE.ConeGeometry(.105,.26,6),amuletGold,centerCrystal,
+      [Math.sin(a)*.47,Math.cos(a)*.47,0],[1,1,1],false);
+    tip.rotation.z=-a;
+  }
+  const amuletHalo=mesh(new THREE.TorusGeometry(.67,.018,6,48),
+    new THREE.MeshBasicMaterial({color:'#b6ffe8',transparent:true,opacity:.55}),
+    centerCrystal,[0,0,0],[1,1,1],false);
+  const glow=new THREE.PointLight('#76f6cf',.75,3.1);glow.position.set(0,.2,.2);centerCrystal.add(glow);
   centerCrystal.visible=false;
   // ALPHA 0.12 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
   // Gli elementi architettonici goblin sono segnaposto originali e modulari:
@@ -404,7 +418,7 @@ function init(){
   // Segno dello scafo sulla sabbia; rende riconoscibile il punto d'approdo.
   terrainPatch(-20.6,16.1,2.85,1.35,mat('#d4b88c'),51,-.025);
 
-  // Alpha 0.14: la battaglia ha un'area autonoma, molto lontana dalla mappa.
+  // Alpha 0.15: la battaglia ha un'area autonoma, molto lontana dalla mappa.
   // La distanza consente al frustum culling di non disegnare il campo Goblin
   // mentre il giocatore combatte il Boss (senza ricaricare la pagina).
   const BOSS_X=170,BOSS_Z=0;
@@ -420,19 +434,53 @@ function init(){
   const arenaRing=mesh(new THREE.RingGeometry(15.55,16.30,96),
     mat('#777e74',.98,{side:THREE.DoubleSide}),bossArena,[0,.016,0],[1,.93,1],false);
   arenaRing.rotation.x=-Math.PI/2;
+  // Alpha 0.15: arena architettonica costruita con moduli semplici, SENZA
+  // la roccaforte GLB chiusa (la mesh originale si accavallava come un blob).
+  // Raggio utile ~15m; tutti i muri sono fuori dal bordo di collisione.
+  const arenaStone=mat('#89958b',.92),arenaStoneLight=mat('#b6b6a1',.88);
+  const arenaStoneDark=mat('#52645c',.96),arenaWood=mat('#6e4d38',.88);
+  const arenaGold=mat('#bd985d',.56,{metalness:.15});
   const arenaMarkerStones=[];
-  for(let i=0;i<24;i++){
-    const a=i*Math.PI*2/24;
-    if(a>1.28&&a<1.86)continue; // apertura di arrivo a sud
-    const x=Math.cos(a)*16.0,z=Math.sin(a)*15.2;
-    const stone=mesh(new THREE.CylinderGeometry(.46,.52,.70,7),em.darkStone,bossArena,[x,.30,z],[1,1,1],false);
-    stone.rotation.y=a;arenaMarkerStones.push(stone);
+  for(let i=0;i<40;i++){
+    const a=(i+.5)*Math.PI*2/40;
+    if(Math.abs(a-Math.PI/2)<.19)continue; // cancello di ingresso a sud (+Z)
+    const x=Math.cos(a)*16.45,z=Math.sin(a)*15.75;
+    const wall=mesh(new THREE.BoxGeometry(2.55,3.35,.78),
+      i%5===0?arenaStoneLight:arenaStone,bossArena,[x,1.65,z],[1,1,1],false);
+    wall.rotation.y=-a-Math.PI/2;
+    const cap=mesh(new THREE.BoxGeometry(2.6,.27,.9),arenaStoneDark,bossArena,[x,3.37,z],[1,1,1],false);
+    cap.rotation.y=wall.rotation.y;
+    if(i%2===0){
+      const crenel=mesh(new THREE.BoxGeometry(.78,.62,.9),arenaStoneLight,bossArena,[x,3.78,z],[1,1,1],false);
+      crenel.rotation.y=wall.rotation.y;
+    }
+    arenaMarkerStones.push(wall);
   }
-  // Torce decorative: luce emissiva, senza decine di luci dinamiche.
-  for(let i=0;i<12;i++){
-    const a=i*2*Math.PI/12,x=Math.cos(a)*15.5,z=Math.sin(a)*14.8;
-    mesh(new THREE.CylinderGeometry(.21,.30,1.2,7),em.darkStone,bossArena,[x,.58,z],[1,1,1],false);
-    const flame=mesh(new THREE.ConeGeometry(.19,.48,8),em.flame,bossArena,[x,1.38,z],[1,1,1],false);
+  // Due torri compatte che incorniciano la soglia, senza invadere l'arena.
+  for(const x of [-3.35,3.35]){
+    mesh(new THREE.CylinderGeometry(1.12,1.25,4.7,10),arenaStoneDark,bossArena,[x,2.25,15.55],[1,1,1],false);
+    mesh(new THREE.CylinderGeometry(1.30,1.30,.30,10),arenaStoneLight,bossArena,[x,4.68,15.55],[1,1,1],false);
+    mesh(new THREE.ConeGeometry(1.36,1.55,10),arenaWood,bossArena,[x,5.58,15.55],[1,1,1],false);
+  }
+  const gateLintel=mesh(new THREE.BoxGeometry(4.7,.95,.90),arenaStoneLight,bossArena,[0,4.4,15.55],[1,1,1],false);
+  mesh(new THREE.BoxGeometry(3.9,.14,.98),arenaGold,bossArena,[0,4.95,15.55],[1,1,1],false);
+  // Pietre incastonate e cerchi rituali: geometrie basse, nessun groviglio.
+  for(let i=0;i<20;i++){
+    const a=i*Math.PI*2/20,x=Math.cos(a)*13.75,z=Math.sin(a)*13.75;
+    const tile=mesh(new THREE.BoxGeometry(1.3,.11,.85),i%3?arenaStone:arenaStoneLight,
+      bossArena,[x,.045,z],[1,1,1],false);tile.rotation.y=-a;
+  }
+  for(const r of [6.5,10.7]){
+    const circle=mesh(new THREE.RingGeometry(r-.08,r+.08,96),
+      new THREE.MeshBasicMaterial({color:r<8?'#d5bb78':'#798d7a',side:THREE.DoubleSide,
+        transparent:true,opacity:.75,depthWrite:false}),bossArena,[0,.018,0],[1,1,1],false);
+    circle.rotation.x=-Math.PI/2;
+  }
+  // Quattro bracieri, senza costose luci dinamiche supplementari.
+  for(let i=0;i<4;i++){
+    const a=(i+.5)*Math.PI/2,x=Math.cos(a)*12.9,z=Math.sin(a)*12.9;
+    mesh(new THREE.CylinderGeometry(.32,.42,1.0,8),arenaStoneDark,bossArena,[x,.48,z],[1,1,1],false);
+    const flame=mesh(new THREE.ConeGeometry(.27,.76,9),em.flame,bossArena,[x,1.30,z],[1,1,1],false);
     flames.push({mesh:flame,phase:i*.64});
   }
   // Percorso finale dal falò alla vera soglia del modello 3D.
@@ -572,11 +620,12 @@ function init(){
     plank.rotation.y=Math.sin(i*1.9)*.015;
   }
   for(let side of [-1,1]){
-    for(let x of [-2.15,-1.1,0,1.1,2.15]){
-      stick(riverBridge,em.woodDark,[x,.04,side*1.77],[x,.94,side*1.77],.087,.075,7);
+    // Parapetti arretrati lateralmente: ingresso e uscita del ponte liberi.
+    for(let x of [-1.25,0,1.25]){
+      stick(riverBridge,em.woodDark,[x,.04,side*2.15],[x,.86,side*2.15],.075,.068,7);
     }
-    stick(riverBridge,em.wood,[ -2.2,.77,side*1.77],[2.2,.77,side*1.77],.075,.075,7);
-    stick(riverBridge,em.rope,[-2.2,.48,side*1.77],[2.2,.48,side*1.77],.026,.026,6);
+    stick(riverBridge,em.wood,[-1.75,.74,side*2.15],[1.75,.74,side*2.15],.07,.07,7);
+    stick(riverBridge,em.rope,[-1.75,.46,side*2.15],[1.75,.46,side*2.15],.024,.024,6);
   }
   // Cespugli e canneti delle sponde. Istanziare evita decine di draw-call.
   const bushGeo=new THREE.IcosahedronGeometry(1,1),bushM=new THREE.InstancedMesh(bushGeo,em.shrub,66);
@@ -833,7 +882,7 @@ function init(){
   let enemyLoader=null;
   let criticalAssetsReady=false;
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0140',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0150',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -917,28 +966,24 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0140',
-    fort_closed:'./assets/fort_closed.glb?v=0140',
-    goblin_tower:'./assets/goblin_tower.glb?v=0140',
-    goblin_tent:'./assets/goblin_tent.glb?v=0140',
-    goblin_fence:'./assets/goblin_fence.glb?v=0140',
-    boat:'./assets/boat.glb?v=0140',palm:'./assets/palm.glb?v=0140',
-    pine:'./assets/pine.glb?v=0140',tree:'./assets/tree.glb?v=0140',
-    rock_mid:'./assets/rock_mid.glb?v=0140',
-    bow:'./assets/bow.glb?v=0140',dagger:'./assets/dagger.glb?v=0140',mace:'./assets/mace.glb?v=0140'
+    fort_open:'./assets/fort_open.glb?v=0150',
+    goblin_tower:'./assets/goblin_tower.glb?v=0150',
+    goblin_tent:'./assets/goblin_tent.glb?v=0150',
+    goblin_fence:'./assets/goblin_fence.glb?v=0150',
+    boat:'./assets/boat.glb?v=0150',palm:'./assets/palm.glb?v=0150',
+    pine:'./assets/pine.glb?v=0150',tree:'./assets/tree.glb?v=0150',
+    bow:'./assets/bow.glb?v=0150',dagger:'./assets/dagger.glb?v=0150',mace:'./assets/mace.glb?v=0150'
   };
   // [modello, posizione X/Y/Z, altezza, rotazione Y]
   // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
   // Disposizione ordinata: roccaforte aperta = ingresso del campo;
   // torri agli angoli, tende a lati del focolare, palizzate sul perimetro.
-  // La roccaforte chiusa è l'anello reale dell'arena, centrato sul Boss.
+  // Arena Boss ricostruita a moduli per eliminare geometrie deformate.
   const environmentSlots=[
     // Pianta leggibile: ingresso a sud, piazza/fuoco al centro,
     // tende simmetriche a est/ovest, torri ai lati del portale,
     // recinzione perimetrale con varco centrale libero.
     ['fort_open',[16,0,-14.5],5.8,0],
-    // La fortezza circolare è allineata al centro della grande arena.
-    ['fort_closed',[170,0,0],6.0,0],
     ['goblin_tower',[9.4,0,-13.4],3.5,.08],
     ['goblin_tower',[22.6,0,-13.4],3.5,-.08],
     ['goblin_tent',[11.6,0,-7.5],2.05,.12],
@@ -947,30 +992,6 @@ function init(){
     ['goblin_fence',[23.0,0,-6.6],2.15,Math.PI/2],
     ['goblin_fence',[11.4,0,-2.5],2.15,0],
     ['goblin_fence',[20.6,0,-2.5],2.15,0],
-    ['rock_mid',[-19.8,0,8.1],1.0,0.3],
-    ['rock_mid',[-21.5,0,11.1],0.7,1.4],
-    ['rock_mid',[-13.5,0,10.4],0.52,2.0],
-    ['rock_mid',[-18.2,0,4.3],1.2,0.6],
-    ['rock_mid',[-17.8,0,-1.3],1.05,2.2],
-    ['rock_mid',[-15.8,0,-4.0],0.66,0.9],
-    ['rock_mid',[-11.0,0,-7.4],1.42,1.7],
-    ['rock_mid',[-7.6,0,-7.5],0.88,2.9],
-    ['rock_mid',[-5.4,0,1.0],0.83,0.8],
-    ['rock_mid',[-2.1,0,4.0],1.13,2.0],
-    ['rock_mid',[1.0,0,5.0],0.86,0.4],
-    ['rock_mid',[0.5,0,-5.0],1.27,2.6],
-    ['rock_mid',[7.8,0,5.0],1.07,1.3],
-    ['rock_mid',[9.4,0,-6.9],1.15,2.2],
-    ['rock_mid',[11.6,0,-8.8],0.63,0.4],
-    ['rock_mid',[22.7,0,-2.4],1.02,1.1],
-    ['rock_mid',[25.0,0,-9.2],0.72,2.7],
-    ['rock_mid',[-21.5,0,20.8],0.65,0.3],
-    ['rock_mid',[-8.5,0,-13.6],1.22,0.8],
-    ['rock_mid',[-19.5,0,-12.0],0.92,1.5],
-    ['rock_mid',[-4.1,0,-14.1],0.8,2.5],
-    ['rock_mid',[12.3,0,10.0],1.13,0.5],
-    ['rock_mid',[21.7,0,9.2],1.05,2.3],
-    ['rock_mid',[14.3,0,21.0],0.72,0.8],
     ['boat',[-20.6,.035,16.1],1.10,.18],
     ['palm',[-21.7,0,18.2],4.45,.25],
     ['palm',[-15.2,0,18.9],4.75,1.62],
@@ -1001,12 +1022,32 @@ function init(){
     ['tree',[10.3,0,-9.8],5.1,.4],
     ['tree',[24.8,0,-5.3],5.0,1.2]
   ];
+  // 0.15: rocce scenografiche VISIBILI, indipendenti dal GLB facoltativo.
+  // Queste forme sostituiscono il GLB roccia che nelle versioni precedenti
+  // risultava invisibile; anche le collisioni ora corrispondono alle mesh.
+  const rockLandmarks=[
+    [-18.7,5.9,1.75,.30],[-15.2,-3.6,1.55,1.1],[-11.0,-7.3,1.9,.5],
+    [-8.0,-9.1,1.45,1.8],[-3.8,5.7,1.65,.3],[.2,-7.0,1.6,1.0],
+    [9.5,5.2,1.65,2.2],[23.8,-3.8,1.75,1.2],[-21.0,20.8,1.35,.5]
+  ];
+  const visibleRockMat=mat('#adb5a8',.97,{flatShading:true});
+  const visibleRockShade=mat('#7e9186',.96,{flatShading:true});
+  for(const [x,z,sz,rot] of rockLandmarks){
+    const stone=mesh(new THREE.DodecahedronGeometry(1,1),visibleRockMat,world,
+      [x,sz*.43,z],[sz*.80,sz*.59,sz*.71],false);
+    stone.rotation.set(.10,rot,.10);
+    const foot=mesh(new THREE.DodecahedronGeometry(1,0),visibleRockShade,world,
+      [x+sz*.43,sz*.17,z+sz*.32],[sz*.40,sz*.28,sz*.35],false);
+    foot.rotation.y=rot*.7;
+  }
   // Alpha 0.13: collisioni leggere indipendenti dai poligoni GLB.
   // Cerchi per tronchi/rocce, rettangoli orientati per edifici e recinti.
   // Sono registrate SOLO quando il modello relativo viene caricato.
   const solidCircles=[],solidBoxes=[];
   const PLAYER_RADIUS=.37;
   function addCircle(x,z,r){solidCircles.push({x,z,r});}
+  // Collisioni SOLO sulle rocce che vengono realmente disegnate.
+  for(const [x,z,sz] of rockLandmarks)addCircle(x,z,sz*.55);
   function addBox(x,z,hx,hz,angle=0){
     solidBoxes.push({x,z,hx,hz,c:Math.cos(angle),s:Math.sin(angle)});
   }
@@ -1026,8 +1067,7 @@ function init(){
       addBox(x-3.2,z,1.35,.60,angle);
       addBox(x+3.2,z,1.35,.60,angle);
     }
-    // fort_closed: collisione circolare con apertura, gestita sotto.
-  }
+    }
   function collisionAt(x,z,r=.37,includeEnemies=false){
     if(currentArea==='boss'){
       const dx=x-BOSS_X,dz=z-BOSS_Z;
@@ -1076,7 +1116,8 @@ function init(){
     return false;
   }
   // Quattro colonne delle rovine e falò centrale: solidi anche senza GLB.
-  for(const [x,z] of [[6.8,-.15],[11.1,-.2],[6.8,3.2],[11.2,3.35]])addCircle(x,z,.42);
+  // 0.15: rimossi i collider invisibili delle colonne presso il ponte.
+  // Restano solo i collider reali degli edifici e dei modelli caricati.
   addCircle(12.6,-8.4,.62);
   // Scivolamento: tenta la diagonale, poi i due assi separati.
   // Sottopassi per evitare di attraversare oggetti con dt variabile.
@@ -1125,7 +1166,7 @@ function init(){
         }
       }else{
         const heights={pine:5.25,palm:4.5,tree:5.1,rock_mid:.82,boat:1.25,
-          fort_open:5.25,fort_closed:5.05,goblin_tower:3.9,goblin_tent:2.25,goblin_fence:2.05};
+          fort_open:5.25,goblin_tower:3.9,goblin_tent:2.25,goblin_fence:2.05};
         normalizeModel(scene,heights[key]);
         for(const [name,pos,height,rotation] of environmentSlots){
           if(name!==key)continue;
@@ -1136,15 +1177,6 @@ function init(){
           // Nella 0.10 solo le rocce erano scalate: la roccaforte del Boss
           // rimaneva minuscola anche modificando l'altezza nella tabella.
           holder.scale.setScalar(height/heights[key]);
-          if(key==='fort_closed'){
-            // Il GLB e una vera arena ad anello, non un edificio sullo sfondo.
-            // Base normalizzata: X ~11.1, Z ~13.8; adattata a ~30 x 30.
-            holder.scale.set(2.70,1.0,2.17);
-            // La ring resta visibile sotto le mura come riferimento di confine.
-            arenaRing.material.opacity=.32;
-            arenaRing.material.transparent=true;
-            for(const marker of arenaMarkerStones)marker.visible=false;
-          }
           holder.add(instance);
           if(key==='boat'){
             holder.rotation.z=.035;holder.rotation.x=.02;
@@ -1152,7 +1184,7 @@ function init(){
             // Un'ombra piatta fa risaltare lo scafo anche su schermi piccoli.
             circularShadow(world,pos[0],pos[2],1.65,.22);
           }
-          if(key==='fort_open'||key==='fort_closed'||key.startsWith('goblin_'))holder.name='Roccaforte_Goblin_'+key;
+          if(key==='fort_open'||key.startsWith('goblin_'))holder.name='Roccaforte_Goblin_'+key;
           world.add(holder);
           registerModelCollision(key,pos,height,rotation);
         }
@@ -1227,7 +1259,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0140',goblin:'./goblin-ottimizzato.glb?v=0140',boss:'./assets/boss.glb?v=0140'};
+    const paths={slime:'./slime-verde.glb?v=0150',goblin:'./goblin-ottimizzato.glb?v=0150',boss:'./assets/boss.glb?v=0150'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -1261,7 +1293,7 @@ function init(){
   }
   function bossGoblin(x,z,seed){
     const e=slime(x,z,seed);
-    e.userData.kind='boss';e.userData.hp=24;e.userData.maxHp=24;
+    e.userData.kind='boss';e.userData.hp=29;e.userData.maxHp=29; // +20% rispetto ai 24 HP della 0.14, arrotondati
     e.userData.speed=.75;e.userData.attack=1.3;
     e.userData.life.position.y=3.5;
     e.userData.fill.material=e.userData.fill.material.clone();
@@ -1276,7 +1308,8 @@ function init(){
   const enemies=[];
   const origins=[[-12.5,4.1],[-7.2,2.4],[-.6,2.5],[8.1,-1.9],[13.2,-5.4]];
   origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
-  let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0,winTimer=-1;
+  let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0;
+  let firstAmuletCollected=false,bossDefeated=false;
   let currentArea='island',portalCooldown=0,bossSpawned=false;
   const areaTransition=$('#area-transition');
   function transitionArea(target){
@@ -1366,7 +1399,12 @@ function init(){
     $('#hpbar').style.width=(health/maxHealth*100)+'%';$('#hptext').textContent=Math.ceil(health)+' / '+maxHealth+' HP';
     $('#coins').textContent='✦ '+coins+' monete';$('#kills').textContent=stage===1?'Nemici '+Math.min(kills,5)+' / 5':stage===2?(currentArea==='boss'?'BOSS GOBLIN':'PORTA DEL BOSS'):'BOSS SCONFITTO';
     $('#level').textContent='Livello '+level;$('#xpbar').style.width=(xp/xpNeeded()*100)+'%';
-    $('#quest-text').textContent=currentArea==='boss'?'Sconfiggi il Boss Goblin!':stage===1?'Esplora la foresta, libera il campo e raggiungi la porta':stage===2?'Attraversa la porta 3D del Boss':'Il cristallo si è risvegliato!';
+    $('#quest-text').textContent=firstAmuletCollected?'Isola 1 completata!':bossDefeated?'Raccogli l’Amuleto della Prima Scintilla!':currentArea==='boss'?'Sconfiggi il Boss Goblin!':stage===1?'Esplora la foresta, libera il campo e raggiungi la porta':'Attraversa la porta 3D del Boss';
+    const boss=enemies.find(e=>e.userData.kind==='boss');
+    const bossUI=$('#boss-health');
+    if(bossUI){bossUI.classList.toggle('visible',currentArea==='boss'&&!!boss&&state!=='won');
+      if(boss){$('#boss-hp-fill').style.width=(100*boss.userData.hp/boss.userData.maxHp)+'%';
+        $('#boss-hp-numbers').textContent=Math.ceil(boss.userData.hp)+' / '+boss.userData.maxHp+' HP';}}
   }
   function showDialog(title,detail,button='CONTINUA'){
     $('#dialog').classList.add('visible');$('#dialog-text').innerHTML=detail;
@@ -1388,7 +1426,7 @@ function init(){
     damage=1;fireRate=1;moveSpeed=4.15;extraArrows=0;pierce=0;regeneration=0;
     stage=1;element='arcana';upgradeQueue=0;Object.keys(upgradeLevels).forEach(k=>delete upgradeLevels[k]);
     $('#upgrade-overlay').classList.remove('visible');refreshElement();
-    centerCrystal.visible=false;winTimer=-1;cooldown=0;updateHud();
+    centerCrystal.visible=false;firstAmuletCollected=false;bossDefeated=false;cooldown=0;updateHud();
   }
   $('#start').addEventListener('click',start);
   $('#pause').addEventListener('click',()=>{
@@ -1460,9 +1498,10 @@ function init(){
     coins+=reward;kills++;updateHud();
     toast('✦ +'+reward+' MONETE · '+kind.toUpperCase()+' SCONFITTO!',1.6);
     if(kind==='boss'){
-      stage=3;winTimer=2.0;centerCrystal.visible=true;
-      sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#a7eaff',22);
-      toast('IL BOSS È SCONFITTO! IL CRISTALLO SI RISVEGLIA!',2.7);
+      stage=3;bossDefeated=true;centerCrystal.visible=true;
+      sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#9bffe3',24);
+      toast('BOSS SCONFITTO! RACCOGLI L’AMULETO LUMINOSO!',4.5);
+      updateHud();
       return;
     }
     gainXp(kind==='goblin'?20:12);
@@ -1476,6 +1515,7 @@ function init(){
     const data=e.userData;
     data.hp=Math.max(0,data.hp-damage);data.flash=.16;data.life.visible=true;
     data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
+    if(data.kind==='boss')updateHud();
     if(a?.element==='ice')data.slow=Math.max(data.slow||0,2.8);
     // Il fuoco applica una sola bruciatura breve, senza sommare tick
     // a ogni freccia. Rimane utile ma non elimina il Boss in pochi colpi.
@@ -1579,7 +1619,7 @@ function init(){
     }
     animateEnvironment(elapsed);
     updateMiniMap(dt);
-    if(centerCrystal.visible){centerCrystal.rotation.y=elapsed*.8;centerCrystal.position.y=1.1+Math.sin(elapsed*2.2)*.15;glow.intensity=1.4+Math.sin(elapsed*3)*.45;}
+    if(centerCrystal.visible){centerCrystal.rotation.y=elapsed*.85;centerCrystal.position.y=1.48+Math.sin(elapsed*2.6)*.18;glow.intensity=1.1+Math.sin(elapsed*3)*.35;}
     if(state==='playing'){
       const x=move.x+(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);
       const y=move.y+(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
@@ -1627,6 +1667,7 @@ function init(){
         const dx=hero.root.position.x-e.position.x,dz=hero.root.position.z-e.position.z,d=Math.hypot(dx,dz);
         if(data.burn>0){data.burn-=dt;data.burnTick=(data.burnTick||0)+dt;
           if(data.burnTick>=1.3){data.burnTick=0;data.hp=Math.max(0,data.hp-1);data.life.visible=true;data.fill.scale.x=Math.max(.01,data.hp/data.maxHp);
+            if(data.kind==='boss')updateHud();
             if(data.hp<=0){defeated(e);continue;}}
         }
         data.slow=Math.max(0,(data.slow||0)-dt);
@@ -1636,7 +1677,20 @@ function init(){
           const er=data.kind==='boss'?1.10:.43;
           moveWithCollision(e,dx/d*data.speed*slowFactor*dt,dz/d*data.speed*slowFactor*dt,er,false);
         }
-        if(d<reach){data.attack-=dt;if(data.attack<=0){takeDamage(data.kind==='boss'?18:9);data.attack=data.kind==='boss'?1.65:1.28}}
+        if(data.kind==='boss'){
+          // Faccia a faccia: carica il colpo, poi colpisce solo se il mago
+          // è ancora a distanza. Una schivata laterale evita il danno.
+          if(d<2.6&&data.attackWindup===undefined&&data.attack<=0){
+            data.attackWindup=.85;toast('⚠ IL GOBLIN MAGGIORE PREPARA UN COLPO!',.9);
+          }
+          if(data.attackWindup!==undefined){
+            data.attackWindup-=dt;
+            if(data.attackWindup<=0){
+              if(d<2.6)takeDamage(18);
+              data.attack=2.0;delete data.attackWindup;
+            }
+          }else data.attack-=dt;
+        }else if(d<reach){data.attack-=dt;if(data.attack<=0){takeDamage(9);data.attack=1.28}}
         const b=data.body;
         // Il colpo non moltiplica più la scala a ogni fotogramma:
         // il Boss torna sempre alle proporzioni originali.
@@ -1670,7 +1724,16 @@ function init(){
         }
         if(hitOne||a.life<0){removeArrow(a);arrows.splice(i,1)}
       }
-      if(winTimer>=0){winTimer-=dt;if(winTimer<0){state='won';showDialog('CRISTALLO RISVEGLIATO!','Hai sconfitto il Boss Goblin, raggiunto il <b>livello '+level+'</b> e raccolto <b>'+coins+' monete</b>!<br>La prima isola è salva.','GIOCA DI NUOVO')}}
+      if(bossDefeated&&!firstAmuletCollected&&currentArea==='boss'&&
+         Math.hypot(hero.root.position.x-altar.position.x,hero.root.position.z-altar.position.z)<2.15){
+        firstAmuletCollected=true;centerCrystal.visible=false;
+        sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#ffe5a1',32);
+        state='won';updateHud();
+        showDialog('ISOLA COMPLETATA!',
+          'Hai sconfitto il <b>Goblin Maggiore</b> e raccolto l’<b>Amuleto della Prima Scintilla</b>!<br>'+ 
+          '✦ Amuleto 1 / 10 conservato nella collezione.<br>Livello raggiunto: <b>'+level+'</b> · Monete: <b>'+coins+'</b>.',
+          'GIOCA DI NUOVO');
+      }
       if(toastTime>0){toastTime-=dt;if(toastTime<=0)$('#toast').textContent=''}
     }else{
       hero.motion.position.y=Math.sin(elapsed*2.0)*.026;
@@ -1684,14 +1747,24 @@ function init(){
     }
     // Inquadratura fissa isometrica che segue dolcemente il personaggio.
     const target=hero.root.position.clone().add(new V(0,.8,0));
+    if(currentArea==='boss'){
+      const boss=enemies.find(e=>e.userData.kind==='boss');
+      if(boss){
+        // Camera isometrica A: mago e Boss nello stesso fotogramma,
+        // con più peso al mago per non perderlo mai di vista.
+        target.lerp(boss.position.clone().add(new V(0,1.0,0)),.28);
+      }
+    }
     const desired=target.clone().add(cameraOffset);
     camera.position.lerp(desired,Math.min(1,dt*5.0));
     camLook.lerp(target,Math.min(1,dt*6));camera.lookAt(camLook);
     // L'arena del Boss occupa ~33 metri: quando ci si avvicina la
     // telecamera si allarga gradualmente per mostrarne l'estensione.
-    const arenaDistance=Math.hypot(hero.root.position.x-BOSS_X,hero.root.position.z-BOSS_Z);
     const arenaBlend=currentArea==='boss'?1:0;
-    const spanTarget=THREE.MathUtils.lerp(normalCameraSpan,17.5,arenaBlend);
+    const bossForView=enemies.find(e=>e.userData.kind==='boss');
+    const duelDistance=bossForView?hero.root.position.distanceTo(bossForView.position):0;
+    const bossSpan=THREE.MathUtils.clamp(10.4+duelDistance*.26,11.0,13.0);
+    const spanTarget=THREE.MathUtils.lerp(normalCameraSpan,bossSpan,arenaBlend);
     const nextSpan=THREE.MathUtils.lerp(camera.top,spanTarget,Math.min(1,dt*2.2));
     if(Math.abs(nextSpan-camera.top)>.001){
       camera.top=nextSpan;camera.bottom=-nextSpan;
@@ -1705,5 +1778,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0140').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0150').catch(()=>{});
 }

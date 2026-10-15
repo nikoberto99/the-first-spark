@@ -1,0 +1,19 @@
+THE FIRST SPARK — ALPHA 0.15 | DUELLO DEL BOSS E AMULETO
+
+INSTALLAZIONE
+Estrai TUTTI i file nella radice del repository GitHub Pages, sostituendo index.html, game.js, style.css, sw.js, manifest.webmanifest, le cartelle assets e icons. Non lasciare la vecchia cartella assets/fort_closed.glb se vuoi risparmiare spazio (non viene piu usata).
+Verifica che appaia ALPHA 0.15. Su iPhone, in caso di versione precedente, chiudi la web app e riapri Safari per aggiornare. La cache e ora alpha015.
+
+NOVITA
+- Arena Boss ricostruita con mura modulari, torri e torce, SENZA il vecchio GLB fort_closed che risultava un groviglio di geometrie.
+- Telecamera A: visuale isometrica piu vicina e dinamica, mantiene mago e Boss nel campo visivo.
+- Boss: 29 HP (24 nella 0.14, aumento arrotondato di circa 20,8%), barra vita numerica visibile durante lo scontro.
+- Il Boss carica un colpo per 0,85 secondi; si puo schivare allontanandosi.
+- Dopo la vittoria appare l'Amuleto della Prima Scintilla 3D, galleggiante sull'altare. Avvicinati e raccoglilo per attivare ISOLA COMPLETATA e registrare l'amuleto 1/10.
+- Ponte: rimossi collider fantasma presso le colonne, parapetti allontanati dai passaggi.
+- Rocce: aggiunte rocce geometriche garantite e riconoscibili, in sostituzione ai GLB che non erano visibili.
+- Barca, collisioni, percorso spiaggia-foresta-accampamento-porta, gioco orizzontale, 30 secondi minimi di caricamento e potenziamenti mantenuti.
+
+NOTA: I dieci amuleti sono una progressione progettuale: in questa alpha e implementato il primo. Non e ancora disponibile un salvataggio persistente dell'inventario tra sessioni.
+
+VERIFICHE: sintassi JS, percorsi modelli, ZIP. Non testato su iPhone reale.

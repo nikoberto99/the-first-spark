@@ -1,9 +1,9 @@
 {
   "id": "./",
-  "name": "THE FIRST SPARK — Alpha 0.14",
+  "name": "THE FIRST SPARK — Alpha 0.15",
   "short_name": "First Spark",
   "description": "Demo 3D con modelli Meshy ottimizzati, boss e potenziamenti.",
-  "start_url": "./?v=0.14",
+  "start_url": "./?v=0.15",
   "scope": "./",
   "display": "standalone",
   "orientation": "landscape",
