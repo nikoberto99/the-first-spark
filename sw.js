@@ -1,6 +1,6 @@
-const CACHE='first-spark-alpha09-shell-0900';
-const ASSET_CACHE='first-spark-alpha09-models-0900';
-const STATIC=['./','./index.html','./style.css?v=0900','./game.js?v=0900','./manifest.webmanifest','./icons/cover.jpg','./icons/personaggio-originale.jpg','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
+const CACHE='first-spark-alpha010-shell-0100';
+const ASSET_CACHE='first-spark-alpha010-models-0100';
+const STATIC=['./','./index.html','./style.css?v=0100','./game.js?v=0100','./manifest.webmanifest','./icons/cover.jpg','./icons/personaggio-originale.jpg','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('first-spark')&&k!==CACHE&&k!==ASSET_CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{

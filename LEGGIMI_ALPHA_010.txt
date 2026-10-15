@@ -1,0 +1,35 @@
+THE FIRST SPARK — ALPHA 0.10 — AGGIORNAMENTO AMBIENTALE
+
+CORREZIONI
+1. Barca 3D riposizionata sulla spiaggia presso il punto di partenza.
+   Viene caricata prima di rendere giocabile la partita, non più in coda agli edifici.
+2. Eliminato il ponte GLB fuori posto. Resta il ponte fisso che attraversa il fiume.
+3. Eliminate le vecchie rocce geometriche e le rocce grandi.
+   Distribuite 30 rocce GLB Roccia media, in dimensioni medie e piccole.
+   Non è presente un GLB distinto di Roccia piccola nei file disponibili:
+   le rocce piccole sono istanze ridotte dello stesso modello Roccia media.
+4. Erba 3D alta al massimo 0,01 unità (1 cm, se 1 unità = 1 metro),
+   con 8100 ciuffi instanziati nelle aree boschive; non sulla spiaggia,
+   nel fiume, nel laghetto, nei sentieri o negli edifici.
+5. Laghetto: mesh ondulata, texture di riflessi in movimento, increspature.
+6. Fiume: superficie con vertici animati, riflessi e corrente scorrevole.
+7. Mantenuti i potenziamenti, il Boss, la mappa e gli altri GLB della Alpha 0.9.
+8. Nuova versione PWA 0100 per evitare la cache della 0.9.
+
+PROSSIMO PASSAGGIO — ALPHA 0.11
+- Collisioni con edifici, alberi, rocce e acqua; attraversamenti consentiti
+  solo su ponti/sentieri.
+- Test gameplay dall'approdo alla roccaforte del Boss, con checkpoint.
+- Verifica prestazioni iPhone, distanza di visibilità e carichi GLB.
+- Solo dopo, animazioni e combattimento più rifiniti.
+
+COME PUBBLICARE
+Estrai tutto lo ZIP nella radice del repository GitHub Pages,
+sovrascrivendo i file precedenti e aggiornando assets/.
+Puoi rimuovere i vecchi assets/bridge.glb e assets/rock_big.glb.
+Attendi la pubblicazione e riavvia la web app.
+
+NOTA
+Sintassi e integrità dei file verificate. La resa visiva e gli FPS
+non sono stati collaudati su un dispositivo iPhone reale.
+La versione 1.0 sarà pubblicata solo quando la prima isola sarà completata.
