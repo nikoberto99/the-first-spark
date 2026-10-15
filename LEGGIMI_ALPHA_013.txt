@@ -1,0 +1,24 @@
+THE FIRST SPARK — ALPHA 0.13 | COLLISIONI, BARCA, ARENA
+
+INSTALLAZIONE GITHUB PAGES
+1. Aprire lo ZIP ed estrarre tutti i file.
+2. Copiare TUTTI i file e le cartelle nella radice del repository GitHub Pages, sostituendo i precedenti.
+3. Pubblicare e aprire il gioco. Controllare che compaia ALPHA 0.13.
+4. Se compare una versione vecchia: chiudere la web app, ricaricare da Safari, ed eventualmente cancellare i dati del sito per svuotare la cache.
+
+NOVITA 0.13
+- Collisioni leggere con tronchi, rocce, tende, torri, palizzate, pilastri e barca.
+- Movimento con scivolamento lungo gli ostacoli e controllo dei nemici.
+- Laghetto, fiume e mare non attraversabili. Il ponte rimane attraversabile.
+- Parete circolare dell'arena Boss con apertura verso l'accampamento.
+- Arena GLB 'fort_closed' spostata al centro (22,-27) e allargata fino a circa 30x30 unita.
+- Nuova barca dall'ultimo file fornito dall'utente: da 44,36 MB / 1.308.298 triangoli a 4,77 MB / 52.585 triangoli. Texture integrate ridimensionate a 1024 px.
+- Barca arenata sulla spiaggia in posizione (-20.6, 16.1), caricata per prima tra i modelli di scena; modello geometrico sostitutivo se il GLB non viene caricato.
+- Restano visuale orizzontale, caricamento minimo 30 secondi, combattimento e potenziamenti.
+- Aggiornato il namespace della cache alla versione 0.13.
+
+VERIFICHE E LIMITI
+- Controlli automatici: sintassi JavaScript, integrita ZIP, GLB e test unitari di collisione.
+- Non e stata eseguita una prova grafica completa su iPhone; posizione e resa vanno controllate sul dispositivo.
+- Le collisioni sono primitive 2D approssimate, non mesh physics: piccole differenze rispetto ai bordi visivi sono possibili.
+- Three.js e GLTFLoader richiedono connessione Internet al primo caricamento.
