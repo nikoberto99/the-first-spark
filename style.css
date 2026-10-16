@@ -88,3 +88,22 @@
 .boss-health-track{height:12px;border:2px solid #ffcfb6;border-radius:9px;background:#321b23;margin-top:6px;overflow:hidden}
 #boss-hp-fill{height:100%;width:100%;border-radius:9px;background:linear-gradient(90deg,#b93244,#f06a53);transition:width .12s}
 @media(max-height:520px){#boss-health{top:max(6px,env(safe-area-inset-top));width:min(300px,39vw);padding:6px 9px}.boss-health-title{font-size:10px}.boss-health-track{height:9px;margin-top:4px}}
+
+/* Alpha 0.16: impostazioni reali, menu in pausa, salvataggio e audio */
+#settings-overlay{position:fixed;inset:0;z-index:16;display:none;align-items:center;justify-content:center;background:#061c25d9;backdrop-filter:blur(8px);padding:12px;overflow-y:auto}
+#settings-overlay.visible{display:flex}
+.settings-card{width:min(480px,86vw);max-height:95dvh;overflow-y:auto;padding:18px 24px;background:linear-gradient(145deg,#214951,#132c3b);border:1px solid #f0d59f9c;border-radius:20px;box-shadow:0 12px 48px #001e2eaa;display:flex;flex-direction:column;gap:8px}
+.settings-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;color:#ffe0a5;font-weight:1000;letter-spacing:.07em;font-size:clamp(16px,2.7vw,23px);margin-bottom:5px}
+.settings-heading small{color:#a8d7d5;font-size:10px;white-space:nowrap}
+.settings-card label{display:flex;justify-content:space-between;align-items:center;color:#f6f0dc;font-size:13px;font-weight:800;margin-top:3px}
+.settings-card label strong{color:#ffe0a5;font-variant-numeric:tabular-nums}
+.settings-card input[type=range]{width:100%;height:24px;accent-color:#f5c879;touch-action:pan-x;cursor:pointer}
+.settings-action{min-height:38px;border:1px solid #a4c8c5a8;border-radius:10px;background:#2b5860;color:white;font-weight:900;letter-spacing:.04em;font-size:12px;padding:9px}
+.settings-action.primary{background:linear-gradient(135deg,#f9d89a,#dfab67);color:#44331d;border-color:#ffecbf}
+.settings-action.secondary{background:#1b3943;color:#e5e6de}
+#save-status{text-align:center;color:#d2e8d6;font-size:11px;min-height:14px;margin:0 0 3px}
+#continue-game{width:100%;border:1px solid #a5dfcc;border-radius:12px;background:#315e5a;color:#fff5d4;padding:10px;margin-top:9px;font-size:12px;font-weight:900}
+#continue-game[hidden]{display:none}
+@media(orientation:landscape) and (max-height:430px){.settings-card{padding:9px 18px;gap:4px}.settings-card input[type=range]{height:18px}.settings-action{min-height:29px;padding:6px}.settings-heading{font-size:17px;margin:0}.settings-card label{font-size:11px}}
+
+#boss-phase{font-size:10px;color:#f5cd91;background:#713c30;padding:3px 6px;border-radius:5px;white-space:nowrap}

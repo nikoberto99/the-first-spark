@@ -1,0 +1,26 @@
+THE FIRST SPARK — ALPHA 0.16
+===================================
+Pacchetto per GitHub Pages. Copiare TUTTI i file e le cartelle dello ZIP nella radice del repository.
+Avvio: index.html; connessione Internet necessaria per scaricare Three.js via CDN.
+Su iPhone: orientamento orizzontale. Se compare una versione vecchia, ricaricare il sito e verificare la cache del browser/PWA.
+
+NOVITA'
+- Caricamento iniziale minimo 15 secondi; se i modelli impiegano di più, si attende la fine del download.
+- Mago riggato: nuovo GLB ottimizzato con 28 ossa e 2 clip originali Walking/Running.
+  Le altre azioni non sono presenti nel GLB: il tiro con l'arco usa il movimento procedurale esistente.
+- Rimossi paletti/parapetti del ponte e colonne vicine all'uscita.
+- Accampamento ampliato con un perimetro di palizzate e varchi per il sentiero; palizzate istanziate per prestazioni.
+- Boss Goblin: 35 HP, movimento più veloce, fase 2 sotto il 50% HP e attacco speciale ad area annunciato da cerchio arancione.
+- Arena: texture di pietra procedurale su pavimento e muri; visuale isometrica del Boss più vicina.
+- Amuleto: fascio luminoso dopo la sconfitta del Boss; vittoria solo alla raccolta.
+- Menu ingranaggio: pausa, volume musica e effetti separati, salva (floppy), riprendi, torna alla schermata principale.
+- Checkpoint e salvataggi manuali locali: spiaggia, foresta, accampamento, arena; riprendi dalla schermata principale.
+- Audio: accompagnamento ambientale sintetizzato e brevi effetti; NON è ancora una colonna sonora registrata.
+- Ottimizzazione mago: GLB animato ridotto da circa 15,8 MB a circa 2,1 MB mantenendo rig e clip.
+
+LIMITI E NOTE
+- I dati vengono salvati in localStorage nel browser/dispositivo, non in cloud; cancellare i dati del sito elimina i salvataggi.
+- I salvataggi ripristinano il checkpoint, non la posizione esatta del mago. Gli HP del Boss vengono conservati se si salva in arena.
+- La compatibilità e la fluidità reali su iPhone devono essere provate sul dispositivo; non è stato eseguito un test grafico iOS.
+- Il gioco usa ancora asset GLB di Goblin e strutture già presenti nelle versioni precedenti.
+- Per gli attacchi/idle/morte scheletrici del mago servono clip aggiuntive: il GLB ricevuto contiene soltanto Walking e Running.

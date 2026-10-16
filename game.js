@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.15 | Isola guidata, ingresso 3D, boss in area separata
+/* THE FIRST SPARK — Alpha 0.16 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -340,6 +340,10 @@ function init(){
   const amuletHalo=mesh(new THREE.TorusGeometry(.67,.018,6,48),
     new THREE.MeshBasicMaterial({color:'#b6ffe8',transparent:true,opacity:.55}),
     centerCrystal,[0,0,0],[1,1,1],false);
+  const amuletBeam=mesh(new THREE.CylinderGeometry(.20,.40,6.5,12,1,true),
+    new THREE.MeshBasicMaterial({color:'#88ffe2',transparent:true,opacity:.17,depthWrite:false,side:THREE.DoubleSide}),
+    altar,[0,3.15,0],[1,1,1],false);
+  amuletBeam.visible=false;
   const glow=new THREE.PointLight('#76f6cf',.75,3.1);glow.position.set(0,.2,.2);centerCrystal.add(glow);
   centerCrystal.visible=false;
   // ALPHA 0.12 — AMBIENTAZIONE ESPLORABILE (GEOMETRIE LEGGERE)
@@ -437,8 +441,28 @@ function init(){
   // Alpha 0.15: arena architettonica costruita con moduli semplici, SENZA
   // la roccaforte GLB chiusa (la mesh originale si accavallava come un blob).
   // Raggio utile ~15m; tutti i muri sono fuori dal bordo di collisione.
-  const arenaStone=mat('#89958b',.92),arenaStoneLight=mat('#b6b6a1',.88);
-  const arenaStoneDark=mat('#52645c',.96),arenaWood=mat('#6e4d38',.88);
+  const stoneCanvas=document.createElement('canvas');stoneCanvas.width=512;stoneCanvas.height=512;
+  const stoneCtx=stoneCanvas.getContext('2d');stoneCtx.fillStyle='#9f9e8b';stoneCtx.fillRect(0,0,512,512);
+  for(let row=0;row<8;row++)for(let col=0;col<8;col++){
+    const stagger=(row%2)*32,x=col*64-stagger,y=row*64;
+    const variation=Math.floor(rand(row*31+col*7)*34);
+    stoneCtx.fillStyle=`rgb(${133+variation},${133+variation},${121+variation})`;
+    stoneCtx.fillRect(x+2,y+2,61,61);
+    stoneCtx.strokeStyle='rgba(58,66,57,.47)';stoneCtx.lineWidth=2;
+    stoneCtx.strokeRect(x+2,y+2,61,61);
+    for(let k=0;k<6;k++){
+      stoneCtx.fillStyle='rgba(45,55,47,.08)';
+      stoneCtx.fillRect(x+6+rand(row*171+col*19+k)*50,y+6+rand(row*21+col*31+k)*50,3,3);
+    }
+  }
+  const stoneTexture=new THREE.CanvasTexture(stoneCanvas);
+  stoneTexture.colorSpace=THREE.SRGBColorSpace;
+  stoneTexture.wrapS=stoneTexture.wrapT=THREE.RepeatWrapping;
+  stoneTexture.repeat.set(3,3);stoneTexture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  const arenaStone=mat('#ffffff',.95,{map:stoneTexture}),arenaStoneLight=mat('#ddd6c0',.91,{map:stoneTexture});
+  const arenaStoneDark=mat('#77857a',.96,{map:stoneTexture}),arenaWood=mat('#6e4d38',.88);
+  bossGround3.material=mat('#d5d2bd',.97,{map:stoneTexture});
+  bossGround2.material=mat('#c7bda9',.97,{map:stoneTexture});
   const arenaGold=mat('#bd985d',.56,{metalness:.15});
   const arenaMarkerStones=[];
   for(let i=0;i<40;i++){
@@ -484,6 +508,10 @@ function init(){
     flames.push({mesh:flame,phase:i*.64});
   }
   // Percorso finale dal falò alla vera soglia del modello 3D.
+  const specialTelegraph=new THREE.Mesh(new THREE.RingGeometry(3.65,4.1,64),
+    new THREE.MeshBasicMaterial({color:'#f7a14b',side:THREE.DoubleSide,transparent:true,opacity:.52,depthWrite:false}));
+  specialTelegraph.rotation.x=-Math.PI/2;specialTelegraph.visible=false;
+  specialTelegraph.position.y=.08;world.add(specialTelegraph);
   const gateTrail=new THREE.Group();gateTrail.name='Sentiero_porta_del_Boss';env.add(gateTrail);
   for(let i=0;i<10;i++){
     const z=-10.3-i*.54;
@@ -619,14 +647,7 @@ function init(){
     const plank=mesh(new THREE.BoxGeometry(.31,.115,3.9),i%3?em.woodLight:em.wood,riverBridge,[x,.047,0]);
     plank.rotation.y=Math.sin(i*1.9)*.015;
   }
-  for(let side of [-1,1]){
-    // Parapetti arretrati lateralmente: ingresso e uscita del ponte liberi.
-    for(let x of [-1.25,0,1.25]){
-      stick(riverBridge,em.woodDark,[x,.04,side*2.15],[x,.86,side*2.15],.075,.068,7);
-    }
-    stick(riverBridge,em.wood,[-1.75,.74,side*2.15],[1.75,.74,side*2.15],.07,.07,7);
-    stick(riverBridge,em.rope,[-1.75,.46,side*2.15],[1.75,.46,side*2.15],.024,.024,6);
-  }
+  // 0.16: nessun paletto o parapetto vicino al ponte: tavolato completamente libero.
   // Cespugli e canneti delle sponde. Istanziare evita decine di draw-call.
   const bushGeo=new THREE.IcosahedronGeometry(1,1),bushM=new THREE.InstancedMesh(bushGeo,em.shrub,66);
   const reeds=new THREE.InstancedMesh(new THREE.ConeGeometry(.075,.78,5),em.reed,92);
@@ -764,8 +785,8 @@ function init(){
     mesh(new THREE.CylinderGeometry(.39,.32,.19,8),em.darkStone,c,[0,.25+height+.095,0]);
     ball(c,em.moss,[.17,.17+height,.11],[.22,.07,.23],true,false);
   }
-  ruinedColumn(-2.2,-1.6,1.15);ruinedColumn(2.1,-1.65,1.75);
-  ruinedColumn(-2.2,1.75,1.72);ruinedColumn(2.2,1.9,.82);
+  // I pilastri più vicini all'uscita del ponte sono rimossi.
+  ruinedColumn(2.1,-1.65,1.75);ruinedColumn(2.2,1.9,.82);
   for(let i=0;i<9;i++){
     const a=i*6.283/9,r=2.5+rand(i*13)*.35;
     mesh(new THREE.BoxGeometry(.55,.18,.44),em.slateEdge,ruins,[Math.cos(a)*r,.09,Math.sin(a)*r]).rotation.y=a;
@@ -881,8 +902,19 @@ function init(){
   // nemici iniziali non sono pronti. Gli asset decorativi arrivano dopo.
   let enemyLoader=null;
   let criticalAssetsReady=false;
+  let heroMixer=null,heroWalk=null,heroRun=null,heroCurrentAction=null;
+  function updateHeroAnimation(dt,movement){
+    if(!heroMixer)return;
+    const wanted=movement>.72&&heroRun?heroRun:heroWalk;
+    if(wanted&&heroCurrentAction!==wanted){
+      if(heroCurrentAction)heroCurrentAction.fadeOut(.20);
+      wanted.reset().fadeIn(.20).play();heroCurrentAction=wanted;
+    }
+    if(heroCurrentAction)heroCurrentAction.paused=movement<.08;
+    if(movement>.08)heroMixer.update(dt);
+  }
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./mago-colorato.glb?v=0150',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0160',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -893,25 +925,35 @@ function init(){
     model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
     model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
     hero.motion.add(model);
+    if(gltf.animations&&gltf.animations.length){
+      heroMixer=new THREE.AnimationMixer(model);
+      const walk=gltf.animations.find(a=>/walk/i.test(a.name));
+      const run=gltf.animations.find(a=>/run/i.test(a.name));
+      if(walk)heroWalk=heroMixer.clipAction(walk);
+      if(run)heroRun=heroMixer.clipAction(run);
+      if(!heroWalk&&gltf.animations[0])heroWalk=heroMixer.clipAction(gltf.animations[0]);
+      for(const action of [heroWalk,heroRun])if(action){action.setLoop(THREE.LoopRepeat);action.clampWhenFinished=false;}
+      console.info('Animazioni scheletriche del mago:',gltf.animations.map(a=>a.name));
+    }
     // Forza l'inizializzazione delle risorse grafiche prima di mostrare il menu.
     renderer.compile(scene,camera);
     console.info('Mago ottimizzato pronto');
   }
-  // Barra di caricamento con tempo minimo reale di 30 secondi e progresso
+  // Barra di caricamento con tempo minimo reale di 15 secondi e progresso
   // degli asset: non dichiara il 100% finché i file non sono pronti.
-  const MIN_LOADING_MS=30000;
+  const MIN_LOADING_MS=15000;
   const loadStarted=performance.now();
   let assetsFinished=false, assetsProgress=0, assetsTotal=1;
   const loadBar=$('#load-bar'),loadPercent=$('#load-percent'),loadClock=$('#load-clock');
   function updateLoadingUI(){
     const seconds=(performance.now()-loadStarted)/1000;
-    const timeProgress=Math.min(1,seconds/30);
+    const timeProgress=Math.min(1,seconds/15);
     const fileProgress=Math.min(1,assetsProgress/assetsTotal);
     const pct=Math.round(Math.min(timeProgress,fileProgress)*100);
     if(loadBar)loadBar.style.width=pct+'%';
     if(loadPercent)loadPercent.textContent=pct+'%';
-    if(loadClock)loadClock.textContent=assetsFinished&&seconds<30
-      ?'Preparazione del mondo · '+Math.ceil(30-seconds)+' s'
+    if(loadClock)loadClock.textContent=assetsFinished&&seconds<15
+      ?'Preparazione del mondo · '+Math.ceil(15-seconds)+' s'
       :assetsFinished?'Tutto pronto!':'Modelli caricati '+assetsProgress+' / '+assetsTotal;
     if(!loading.classList.contains('hide'))requestAnimationFrame(updateLoadingUI);
   }
@@ -966,14 +1008,42 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0150',
-    goblin_tower:'./assets/goblin_tower.glb?v=0150',
-    goblin_tent:'./assets/goblin_tent.glb?v=0150',
-    goblin_fence:'./assets/goblin_fence.glb?v=0150',
-    boat:'./assets/boat.glb?v=0150',palm:'./assets/palm.glb?v=0150',
-    pine:'./assets/pine.glb?v=0150',tree:'./assets/tree.glb?v=0150',
-    bow:'./assets/bow.glb?v=0150',dagger:'./assets/dagger.glb?v=0150',mace:'./assets/mace.glb?v=0150'
+    fort_open:'./assets/fort_open.glb?v=0160',
+    goblin_tower:'./assets/goblin_tower.glb?v=0160',
+    goblin_tent:'./assets/goblin_tent.glb?v=0160',
+    boat:'./assets/boat.glb?v=0160',palm:'./assets/palm.glb?v=0160',
+    pine:'./assets/pine.glb?v=0160',tree:'./assets/tree.glb?v=0160',
+    bow:'./assets/bow.glb?v=0160',dagger:'./assets/dagger.glb?v=0160',mace:'./assets/mace.glb?v=0160'
   };
+  // Alpha 0.16: un intero quadrante e' dedicato all'avamposto Goblin.
+  // Palizzata continua sui bordi, con varchi centrali a sud e a nord.
+  const goblinDistrict=new THREE.Group();goblinDistrict.name='Distretto_Goblin_0_16';env.add(goblinDistrict);
+  const campFloor=mesh(new THREE.PlaneGeometry(22.0,18.4),mat('#8b8265',1),goblinDistrict,[16,-.026,-8.5],[1,1,1],false);
+  campFloor.rotation.x=-Math.PI/2;
+  const campClear=mesh(new THREE.PlaneGeometry(5.1,17.8),mat('#bca783',1),goblinDistrict,[16,-.016,-8.5],[1,1,1],false);
+  campClear.rotation.x=-Math.PI/2;
+  const stakeGeo=new THREE.CylinderGeometry(.17,.21,2.5,5);
+  const stakeMat=mat('#70553b',.99,{flatShading:true});
+  const stakes=[];
+  for(let z=-17.5;z<=.5;z+=.58){
+    if(z< -3.7)stakes.push([5.15,z]); // ingresso sud-ovest: ponte libero
+    stakes.push([26.85,z]);
+  }
+  for(let x=5.15;x<=26.85;x+=.58){
+    if(Math.abs(x-16)>2.7)stakes.push([x,-17.5]);
+    if(x<7.4||x>12.2)stakes.push([x,-2.2]); // varco sul sentiero reale
+  }
+  const palisade=new THREE.InstancedMesh(stakeGeo,stakeMat,stakes.length);
+  const stakeDummy=new THREE.Object3D();
+  stakes.forEach(([x,z],i)=>{
+    stakeDummy.position.set(x,1.12,z);
+    stakeDummy.rotation.y=rand(i+41)*.15;
+    stakeDummy.scale.set(1,.93+rand(i*5+7)*.16,1);
+    stakeDummy.updateMatrix();palisade.setMatrixAt(i,stakeDummy.matrix);
+  });
+  palisade.instanceMatrix.needsUpdate=true;palisade.castShadow=false;
+  goblinDistrict.add(palisade);
+  // I collider sono aggiunti dopo la creazione delle strutture di collisione.
   // [modello, posizione X/Y/Z, altezza, rotazione Y]
   // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
   // Disposizione ordinata: roccaforte aperta = ingresso del campo;
@@ -984,14 +1054,10 @@ function init(){
     // tende simmetriche a est/ovest, torri ai lati del portale,
     // recinzione perimetrale con varco centrale libero.
     ['fort_open',[16,0,-14.5],5.8,0],
-    ['goblin_tower',[9.4,0,-13.4],3.5,.08],
-    ['goblin_tower',[22.6,0,-13.4],3.5,-.08],
-    ['goblin_tent',[11.6,0,-7.5],2.05,.12],
-    ['goblin_tent',[20.4,0,-7.5],2.05,-.12],
-    ['goblin_fence',[9.0,0,-6.6],2.15,Math.PI/2],
-    ['goblin_fence',[23.0,0,-6.6],2.15,Math.PI/2],
-    ['goblin_fence',[11.4,0,-2.5],2.15,0],
-    ['goblin_fence',[20.6,0,-2.5],2.15,0],
+    ['goblin_tower',[7.8,0,-13.5],3.5,.08],
+    ['goblin_tower',[24.2,0,-13.5],3.5,-.08],
+    ['goblin_tent',[9.5,0,-7.8],2.05,.12],
+    ['goblin_tent',[22.5,0,-7.8],2.05,-.12],
     ['boat',[-20.6,.035,16.1],1.10,.18],
     ['palm',[-21.7,0,18.2],4.45,.25],
     ['palm',[-15.2,0,18.9],4.75,1.62],
@@ -1051,6 +1117,10 @@ function init(){
   function addBox(x,z,hx,hz,angle=0){
     solidBoxes.push({x,z,hx,hz,c:Math.cos(angle),s:Math.sin(angle)});
   }
+  // Palizzata esterna, lontana dalla strada centrale.
+  addBox(5.15,-10.6,.20,6.9);addBox(26.85,-8.5,.20,9.0);
+  addBox(9.1,-17.5,3.95,.22);addBox(22.9,-17.5,3.95,.22);
+  addBox(6.2,-2.2,1.05,.22);addBox(19.5,-2.2,7.3,.22);
   function registerModelCollision(key,pos,height,angle){
     const [x,,z]=pos;
     if(key==='boat')addBox(x,z,2.38,.82,angle);
@@ -1259,7 +1329,7 @@ function init(){
   const enemyAssets={};
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0150',goblin:'./goblin-ottimizzato.glb?v=0150',boss:'./assets/boss.glb?v=0150'};
+    const paths={slime:'./slime-verde.glb?v=0160',goblin:'./goblin-ottimizzato.glb?v=0160',boss:'./assets/boss.glb?v=0160'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const scene=gltf.scene;
     const box=new THREE.Box3().setFromObject(scene);
@@ -1293,8 +1363,8 @@ function init(){
   }
   function bossGoblin(x,z,seed){
     const e=slime(x,z,seed);
-    e.userData.kind='boss';e.userData.hp=29;e.userData.maxHp=29; // +20% rispetto ai 24 HP della 0.14, arrotondati
-    e.userData.speed=.75;e.userData.attack=1.3;
+    e.userData.kind='boss';e.userData.hp=35;e.userData.maxHp=35; // 0.16: 35 HP
+    e.userData.speed=.91;e.userData.attack=1.3;e.userData.specialCooldown=6.0;e.userData.phaseTwo=false;
     e.userData.life.position.y=3.5;
     e.userData.fill.material=e.userData.fill.material.clone();
     e.userData.fill.material.color.set('#f44e61');
@@ -1303,6 +1373,7 @@ function init(){
   function spawnEnemy(x,z,i){
     const e=i<3?slime(x,z,i):goblin(x,z,i);
     if(i<3){e.userData.kind='slime';applyEnemyAsset(e);}
+    e.userData.spawnIndex=i;
     return e;
   }
   const enemies=[];
@@ -1310,11 +1381,12 @@ function init(){
   origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
   let state='menu',health=100,coins=0,kills=0,cooldown=0,elapsed=0,attackSwing=0,toastTime=0,shake=0;
   let firstAmuletCollected=false,bossDefeated=false;
+  const deadSpawnIndices=new Set();
   let currentArea='island',portalCooldown=0,bossSpawned=false;
   const areaTransition=$('#area-transition');
   function transitionArea(target){
     if(state!=='playing'||portalCooldown>0)return;
-    state='transition';portalCooldown=2.5;
+    state='transition';portalCooldown=2.5;playSfx(460,.32,'sine');
     if(areaTransition){areaTransition.classList.add('active');
       areaTransition.querySelector('strong').textContent=target==='boss'?'LA FORTEZZA DEL BOSS':'RITORNO ALL’ACCAMPAMENTO';
       areaTransition.querySelector('span').textContent=target==='boss'?'Preparazione dello scontro…':'Ritorno alla prima isola…';}
@@ -1330,7 +1402,7 @@ function init(){
       }
       camera.position.copy(hero.root.position).add(cameraOffset);
       camLook.copy(hero.root.position).add(new V(0,.8,0));
-      updateHud();
+      updateHud();if(target==='boss'){checkpointId='boss';saveGame(false);}
       setTimeout(()=>{if(areaTransition)areaTransition.classList.remove('active');state='playing';},450);
     },520);
   }
@@ -1349,6 +1421,145 @@ function init(){
     {id:'fire',icon:'🔥',name:'Frecce di fuoco',desc:'Sblocca le frecce infuocate',max:1,apply:()=>{element='fire';refreshElement()}},
     {id:'ice',icon:'❄️',name:'Frecce di gelo',desc:'Sblocca le frecce rallentanti',max:1,apply:()=>{element='ice';refreshElement()}}
   ];
+  // Alpha 0.16: salvataggio locale versionato, nessun invio a server.
+  const SAVE_KEY='the-first-spark-save-v016';
+  const AUDIO_KEY='the-first-spark-audio-v016';
+  let checkpointId='beach',lastSavedAt=0;
+  const checkpointPositions={beach:[-17,12.1],forest:[-7,-3],camp:[16,-8.8],boss:[BOSS_X,BOSS_Z+11.3]};
+  function safeRead(key){try{return JSON.parse(localStorage.getItem(key)||'null')}catch(_){return null}}
+  function safeWrite(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){console.warn('Salvataggio locale non disponibile',e);return false}}
+  let volumeSettings={music:55,effects:75};
+  const previousAudio=safeRead(AUDIO_KEY);
+  if(previousAudio&&Number.isFinite(previousAudio.music)&&Number.isFinite(previousAudio.effects)){
+    volumeSettings.music=THREE.MathUtils.clamp(previousAudio.music,0,100);
+    volumeSettings.effects=THREE.MathUtils.clamp(previousAudio.effects,0,100);
+  }
+  let audioCtx=null,musicGain=null,effectsGain=null;
+  function setupAudio(){
+    try{
+      if(!audioCtx){
+        const Ctx=window.AudioContext||window.webkitAudioContext;
+        if(!Ctx)return;
+        audioCtx=new Ctx();musicGain=audioCtx.createGain();effectsGain=audioCtx.createGain();
+        musicGain.connect(audioCtx.destination);effectsGain.connect(audioCtx.destination);
+        for(const [frequency,level] of [[196,.011],[293.66,.006],[392,.003]]){
+          const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+          o.type='sine';o.frequency.value=frequency;g.gain.value=level;
+          o.connect(g);g.connect(musicGain);o.start();
+        }
+      }
+      audioCtx.resume().catch(()=>{});
+      applyVolumes();
+    }catch(err){console.warn('Audio non disponibile',err)}
+  }
+  function applyVolumes(){
+    if(musicGain)musicGain.gain.value=volumeSettings.music/100;
+    if(effectsGain)effectsGain.gain.value=volumeSettings.effects/100;
+    safeWrite(AUDIO_KEY,volumeSettings);
+    $('#music-volume').value=volumeSettings.music;$('#effects-volume').value=volumeSettings.effects;
+    $('#music-value').textContent=volumeSettings.music+'%';$('#effects-value').textContent=volumeSettings.effects+'%';
+  }
+  function playSfx(frequency=440,duration=.12,type='sine'){
+    if(!audioCtx||!effectsGain||volumeSettings.effects===0)return;
+    try{
+      const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+      osc.type=type;osc.frequency.setValueAtTime(frequency,audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(90,frequency*.66),audioCtx.currentTime+duration);
+      gain.gain.setValueAtTime(.11,audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);
+      osc.connect(gain);gain.connect(effectsGain);osc.start();osc.stop(audioCtx.currentTime+duration+.02);
+    }catch(_){}
+  }
+  function makeSave(){
+    const boss=enemies.find(e=>e.userData.kind==='boss');
+    return {version:16,at:Date.now(),checkpoint:checkpointId,area:currentArea,
+      health,maxHealth,coins,kills,level,xp,damage,fireRate,moveSpeed,extraArrows,pierce,regeneration,
+      stage,element,upgradeLevels:{...upgradeLevels},dead:[...deadSpawnIndices],
+      bossDefeated,firstAmuletCollected,bossHp:boss?boss.userData.hp:null,
+      bossSpawned,upgradeQueue};
+  }
+  function updateContinueButton(){
+    const saved=safeRead(SAVE_KEY);
+    const valid=!!(saved&&saved.version===16);
+    $('#continue-game').hidden=!valid;
+    if(valid){const label=saved.firstAmuletCollected?'ISOLA COMPLETATA':
+      saved.checkpoint==='boss'?'ARENA DEL BOSS':saved.checkpoint==='camp'?'ACCAMPAMENTO':
+      saved.checkpoint==='forest'?'FORESTA':'SPIAGGIA';
+      $('#continue-game').textContent='CONTINUA · '+label;}
+  }
+  function saveGame(manual=false){
+    if(state==='menu'||state==='lost')return false;
+    const ok=safeWrite(SAVE_KEY,makeSave());
+    if(ok){lastSavedAt=performance.now();updateContinueButton();
+      if(manual){$('#save-status').textContent='✓ Partita salvata sul dispositivo';playSfx(700,.18);}
+      else toast('✦ CHECKPOINT SALVATO',1.8);
+    }else if(manual)$('#save-status').textContent='Impossibile salvare: controlla lo spazio del browser.';
+    return ok;
+  }
+  function loadSavedGame(){
+    const saved=safeRead(SAVE_KEY);
+    if(!saved||saved.version!==16){toast('NESSUN SALVATAGGIO DISPONIBILE');return;}
+    reset();
+    const fields=['health','maxHealth','coins','kills','level','xp','damage','fireRate','moveSpeed',
+      'extraArrows','pierce','regeneration','stage','upgradeQueue'];
+    const defaults={health:100,maxHealth:100,coins:0,kills:0,level:1,xp:0,damage:1,fireRate:1,moveSpeed:4.15,
+      extraArrows:0,pierce:0,regeneration:0,stage:1,upgradeQueue:0};
+    const values={};for(const key of fields){const v=saved[key];values[key]=Number.isFinite(v)?v:defaults[key];}
+    ({health,maxHealth,coins,kills,level,xp,damage,fireRate,moveSpeed,extraArrows,pierce,regeneration,stage,upgradeQueue}=values);
+    Object.assign(upgradeLevels,saved.upgradeLevels||{});
+    element=elements[saved.element]?saved.element:'arcana';
+    for(const id of saved.dead||[]){
+      if(!Number.isInteger(id)||id<0||id>4)continue;
+      deadSpawnIndices.add(id);
+      const enemy=enemies.find(e=>e.userData.spawnIndex===id);
+      if(enemy){world.remove(enemy);enemies.splice(enemies.indexOf(enemy),1);}
+    }
+    bossDefeated=!!saved.bossDefeated;firstAmuletCollected=!!saved.firstAmuletCollected;
+    currentArea=saved.area==='boss'?'boss':'island';
+    checkpointId=checkpointPositions[saved.checkpoint]?saved.checkpoint:'beach';
+    if(currentArea==='boss'){
+      checkpointId='boss';
+      if(!bossDefeated){
+        const boss=bossGoblin(BOSS_X,BOSS_Z-3.5,89);
+        if(Number.isFinite(saved.bossHp))boss.userData.hp=THREE.MathUtils.clamp(saved.bossHp,1,35);
+        enemies.push(boss);bossSpawned=true;
+      }
+    }
+    const spawn=checkpointPositions[checkpointId];hero.root.position.set(spawn[0],0,spawn[1]);
+    centerCrystal.visible=bossDefeated&&!firstAmuletCollected;amuletBeam.visible=centerCrystal.visible;
+    refreshElement();updateHud();
+    camera.position.copy(hero.root.position).add(cameraOffset);camLook.copy(hero.root.position).add(new V(0,.8,0));
+    state='playing';$('#dialog').classList.remove('visible');$('#settings-overlay').classList.remove('visible');
+    toast('PARTITA CARICATA · '+checkpointId.toUpperCase(),3);
+    setupAudio();
+  }
+  function updateCheckpoint(){
+    let next=checkpointId;
+    if(currentArea==='boss')next='boss';
+    else if(hero.root.position.x>10&&hero.root.position.z< -3.5)next='camp';
+    else if(hero.root.position.x>-11&&hero.root.position.z<5)next='forest';
+    const ranks={beach:0,forest:1,camp:2,boss:3};
+    if(ranks[next]>ranks[checkpointId]){checkpointId=next;saveGame(false);}
+  }
+  function showSettings(){
+    if(state!=='playing')return;
+    state='paused';$('#settings-overlay').classList.add('visible');
+    $('#save-status').textContent='Checkpoint: '+({beach:'Spiaggia',forest:'Foresta',camp:'Accampamento',boss:'Arena Boss'}[checkpointId]||'Spiaggia');
+    applyVolumes();
+  }
+  function hideSettings(){if(state!=='paused')return;$('#settings-overlay').classList.remove('visible');state='playing';}
+  $('#music-volume').addEventListener('input',e=>{volumeSettings.music=+e.target.value;applyVolumes();});
+  $('#effects-volume').addEventListener('input',e=>{volumeSettings.effects=+e.target.value;applyVolumes();});
+  $('#settings-resume').addEventListener('click',hideSettings);
+  $('#settings-save').addEventListener('click',()=>saveGame(true));
+  $('#settings-home').addEventListener('click',()=>{
+    if(!window.confirm('Tornare alla schermata principale? I progressi non salvati andranno persi.'))return;
+    $('#settings-overlay').classList.remove('visible');
+    state='menu';updateContinueButton();
+    showDialog('THE FIRST SPARK','Prima isola · Spiaggia, foresta, accampamento e Boss. Puoi iniziare una nuova avventura o riprendere un salvataggio.','NUOVA PARTITA');
+  });
+  $('#continue-game').addEventListener('click',loadSavedGame);
+  applyVolumes();updateContinueButton();
   function xpNeeded(){return 16+(level-1)*13;}
   function refreshElement(){
     const b=$('#element-button');if(b)b.textContent=elements[element].label+' ◈';
@@ -1404,7 +1615,8 @@ function init(){
     const bossUI=$('#boss-health');
     if(bossUI){bossUI.classList.toggle('visible',currentArea==='boss'&&!!boss&&state!=='won');
       if(boss){$('#boss-hp-fill').style.width=(100*boss.userData.hp/boss.userData.maxHp)+'%';
-        $('#boss-hp-numbers').textContent=Math.ceil(boss.userData.hp)+' / '+boss.userData.maxHp+' HP';}}
+        $('#boss-hp-numbers').textContent=Math.ceil(boss.userData.hp)+' / '+boss.userData.maxHp+' HP';
+        $('#boss-phase').textContent=boss.userData.hp<=boss.userData.maxHp*.5?'FASE 2':'FASE 1';}}
   }
   function showDialog(title,detail,button='CONTINUA'){
     $('#dialog').classList.add('visible');$('#dialog-text').innerHTML=detail;
@@ -1412,33 +1624,31 @@ function init(){
   }
   function start(){
     if(!criticalAssetsReady)return;
-    if(state==='won'||state==='lost')reset();
-    state='playing';$('#dialog').classList.remove('visible');toast('Segui il sentiero e scopri la foresta!',3);
+    if(state==='won'||state==='lost'||state==='menu')reset();
+    state='playing';$('#dialog').classList.remove('visible');setupAudio();toast('Segui il sentiero e scopri la foresta!',3);
   }
   function reset(){
     for(const e of enemies)world.remove(e);enemies.length=0;
     origins.forEach((p,i)=>enemies.push(spawnEnemy(p[0],p[1],i)));
     for(const a of arrows)removeArrow(a);arrows.length=0;
     for(const a of sparks)world.remove(a.mesh);sparks.length=0;
-    currentArea='island';bossSpawned=false;portalCooldown=0;
+    currentArea='island';bossSpawned=false;portalCooldown=0;deadSpawnIndices.clear();checkpointId='beach';
     if(areaTransition)areaTransition.classList.remove('active');
     hero.root.position.set(-17.0,0,12.1);health=100;maxHealth=100;coins=0;kills=0;level=1;xp=0;
     damage=1;fireRate=1;moveSpeed=4.15;extraArrows=0;pierce=0;regeneration=0;
     stage=1;element='arcana';upgradeQueue=0;Object.keys(upgradeLevels).forEach(k=>delete upgradeLevels[k]);
     $('#upgrade-overlay').classList.remove('visible');refreshElement();
-    centerCrystal.visible=false;firstAmuletCollected=false;bossDefeated=false;cooldown=0;updateHud();
+    centerCrystal.visible=false;amuletBeam.visible=false;specialTelegraph.visible=false;firstAmuletCollected=false;bossDefeated=false;cooldown=0;updateHud();
   }
   $('#start').addEventListener('click',start);
-  $('#pause').addEventListener('click',()=>{
-    if(state!=='playing')return;state='paused';showDialog('PAUSA','La Foresta Incantata ti aspetta. Riprendi l’avventura quando vuoi.','RIPRENDI');
-  });
+  $('#pause').addEventListener('click',showSettings);
   function nearestEnemy(){
     let best=null,dmin=9.0;for(const e of enemies){const d=e.position.distanceTo(hero.root.position);if(d<dmin){best=e;dmin=d}}
     return best;
   }
   function shoot(){
     if(state!=='playing'||cooldown>0)return;
-    cooldown=.49/fireRate;attackSwing=1;
+    cooldown=.49/fireRate;attackSwing=1;playSfx(550,.095,'triangle');
     const target=nearestEnemy(),start=hero.root.position.clone().add(new V(.04,1.1,0));
     const aim=target?target.position.clone().add(new V(0,.53,0)):start.clone().addScaledVector(facing,12);
     const baseDir=aim.clone().sub(start).normalize();if(target)facing.copy(baseDir).setY(0).normalize();
@@ -1464,7 +1674,7 @@ function init(){
     if(k===' '&&!e.repeat)shoot();
     if(k==='e'&&!e.repeat)cycleElement();
     if(state==='upgrading'&&['1','2','3'].includes(k))$('#upgrade-panel').children[Number(k)-1]?.click();
-    if(k==='escape'&&state==='playing')$('#pause').click();
+    if(k==='escape'&&state==='playing')$('#pause').click();else if(k==='escape'&&state==='paused')hideSettings();
   });
   window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
   window.addEventListener('blur',()=>{keys.clear();move.x=move.y=0;resetStick()});
@@ -1493,12 +1703,14 @@ function init(){
   function defeated(e){
     const kind=e.userData.kind;
     const pos=e.position.clone().add(new V(0,.50,0));sparkAt(pos,kind==='boss'?'#ffb17e':'#b7fff0',kind==='boss'?26:12);
+    if(kind==='boss')specialTelegraph.visible=false;
+    if(Number.isInteger(e.userData.spawnIndex))deadSpawnIndices.add(e.userData.spawnIndex);
     world.remove(e);const i=enemies.indexOf(e);if(i>=0)enemies.splice(i,1);
     const reward=kind==='boss'?150:kind==='goblin'?30:20;
-    coins+=reward;kills++;updateHud();
+    coins+=reward;kills++;updateHud();playSfx(kind==='boss'?800:600,.25,'triangle');
     toast('✦ +'+reward+' MONETE · '+kind.toUpperCase()+' SCONFITTO!',1.6);
     if(kind==='boss'){
-      stage=3;bossDefeated=true;centerCrystal.visible=true;
+      stage=3;bossDefeated=true;centerCrystal.visible=true;amuletBeam.visible=true;
       sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#9bffe3',24);
       toast('BOSS SCONFITTO! RACCOGLI L’AMULETO LUMINOSO!',4.5);
       updateHud();
@@ -1524,7 +1736,7 @@ function init(){
     if(data.hp<=0)defeated(e);
   }
   function takeDamage(amount){
-    health=Math.max(0,health-amount);updateHud();shake=.25;
+    health=Math.max(0,health-amount);updateHud();shake=.25;playSfx(170,.19,'sawtooth');
     if(navigator.vibrate)navigator.vibrate(24);
     if(health===0){
       state='lost';showDialog('LA SCINTILLA SI È SPENTA','Hai raccolto <b>'+coins+' monete</b> e raggiunto il livello <b>'+level+'</b>. Riprova e scegli potenziamenti diversi.','RIPROVA');
@@ -1617,14 +1829,16 @@ function init(){
       const k=.83+((elapsed*.20+i*.23)%1)*.30;
       r.scale.set(k,k*.72,1);r.material.opacity=.18*(1-((elapsed*.20+i*.23)%1));
     }
-    animateEnvironment(elapsed);
+    if(currentArea!=='boss')animateEnvironment(elapsed);
+    else for(const f of flames){f.mesh.scale.y=.88+.19*Math.sin(elapsed*9+f.phase);}
     updateMiniMap(dt);
-    if(centerCrystal.visible){centerCrystal.rotation.y=elapsed*.85;centerCrystal.position.y=1.48+Math.sin(elapsed*2.6)*.18;glow.intensity=1.1+Math.sin(elapsed*3)*.35;}
+    if(centerCrystal.visible){centerCrystal.rotation.y=elapsed*.85;centerCrystal.position.y=1.48+Math.sin(elapsed*2.6)*.18;glow.intensity=1.1+Math.sin(elapsed*3)*.35;amuletBeam.material.opacity=.13+.07*Math.sin(elapsed*2);}
     if(state==='playing'){
       const x=move.x+(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);
       const y=move.y+(keys.has('s')||keys.has('arrowdown')?1:0)-(keys.has('w')||keys.has('arrowup')?1:0);
       const dist=Math.hypot(x,y);
       const strength=Math.min(1,dist);
+      updateHeroAnimation(dt,dist);
       if(dist>.08){
         const mx=x/dist,my=y/dist;
         // Asse del joystick allineato alla telecamera isometrica.
@@ -1655,6 +1869,7 @@ function init(){
                hero.root.position.z>BOSS_Z+13.1){
         transitionArea('island');
       }
+      updateCheckpoint();
       cooldown=Math.max(0,cooldown-dt);
       if(regeneration>0&&health<maxHealth){health=Math.min(maxHealth,health+regeneration*dt);updateHud();}
       attackSwing=Math.max(0,attackSwing-dt*3.3);
@@ -1678,9 +1893,31 @@ function init(){
           moveWithCollision(e,dx/d*data.speed*slowFactor*dt,dz/d*data.speed*slowFactor*dt,er,false);
         }
         if(data.kind==='boss'){
+          if(!data.phaseTwo&&data.hp<=data.maxHp*.5){
+            data.phaseTwo=true;data.speed*=1.13;data.specialCooldown=2.1;
+            toast('⚠ IL GOBLIN MAGGIORE ENTRA NELLA SECONDA FASE!',3);
+          }
+          if(data.phaseTwo){
+            data.specialCooldown=Math.max(0,(data.specialCooldown||0)-dt);
+            if(data.specialWindup!==undefined){
+              data.specialWindup-=dt;
+              specialTelegraph.visible=true;
+              specialTelegraph.position.set(e.position.x,.09,e.position.z);
+              specialTelegraph.material.opacity=.28+.36*Math.abs(Math.sin(elapsed*9));
+              if(data.specialWindup<=0){
+                specialTelegraph.visible=false;
+                if(Math.hypot(hero.root.position.x-e.position.x,hero.root.position.z-e.position.z)<4.1)takeDamage(15);
+                sparkAt(e.position.clone().add(new V(0,.2,0)),'#ffb65e',30);
+                data.specialCooldown=7.0;delete data.specialWindup;
+              }
+            }else if(data.specialCooldown<=0&&d<7){
+              delete data.attackWindup;data.attack=2.0;data.specialWindup=1.35;
+              toast('⚠ ONDA D’URTO! ALLONTANATI DAL CERCHIO!',1.7);
+            }
+          }
           // Faccia a faccia: carica il colpo, poi colpisce solo se il mago
           // è ancora a distanza. Una schivata laterale evita il danno.
-          if(d<2.6&&data.attackWindup===undefined&&data.attack<=0){
+          if(d<2.6&&data.attackWindup===undefined&&data.specialWindup===undefined&&data.attack<=0){
             data.attackWindup=.85;toast('⚠ IL GOBLIN MAGGIORE PREPARA UN COLPO!',.9);
           }
           if(data.attackWindup!==undefined){
@@ -1726,9 +1963,9 @@ function init(){
       }
       if(bossDefeated&&!firstAmuletCollected&&currentArea==='boss'&&
          Math.hypot(hero.root.position.x-altar.position.x,hero.root.position.z-altar.position.z)<2.15){
-        firstAmuletCollected=true;centerCrystal.visible=false;
+        firstAmuletCollected=true;centerCrystal.visible=false;amuletBeam.visible=false;
         sparkAt(altar.position.clone().add(new V(0,1.5,0)),'#ffe5a1',32);
-        state='won';updateHud();
+        state='won';updateHud();saveGame(false);
         showDialog('ISOLA COMPLETATA!',
           'Hai sconfitto il <b>Goblin Maggiore</b> e raccolto l’<b>Amuleto della Prima Scintilla</b>!<br>'+ 
           '✦ Amuleto 1 / 10 conservato nella collezione.<br>Livello raggiunto: <b>'+level+'</b> · Monete: <b>'+coins+'</b>.',
@@ -1763,7 +2000,7 @@ function init(){
     const arenaBlend=currentArea==='boss'?1:0;
     const bossForView=enemies.find(e=>e.userData.kind==='boss');
     const duelDistance=bossForView?hero.root.position.distanceTo(bossForView.position):0;
-    const bossSpan=THREE.MathUtils.clamp(10.4+duelDistance*.26,11.0,13.0);
+    const bossSpan=THREE.MathUtils.clamp(8.2+duelDistance*.15,8.7,10.2);
     const spanTarget=THREE.MathUtils.lerp(normalCameraSpan,bossSpan,arenaBlend);
     const nextSpan=THREE.MathUtils.lerp(camera.top,spanTarget,Math.min(1,dt*2.2));
     if(Math.abs(nextSpan-camera.top)>.001){
@@ -1778,5 +2015,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0150').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0160').catch(()=>{});
 }
