@@ -1,0 +1,16 @@
+THE FIRST SPARK — Alpha 0.17.1 — CORREZIONE CARICAMENTO
+
+Correzioni:
+- Allineata la versione Three.js a 0.160.1 tra importmap e GLTFLoader.
+- Import del motore principale attraverso la stessa importmap utilizzata dai componenti.
+- Migliorati messaggi di errore e fallback di GLTFLoader.
+- Aggiornati i parametri di versione e la cache del service worker.
+- Nessuna modifica a meccaniche, mappe, modelli e animazioni della 0.17.
+
+INSTALLAZIONE:
+1. Estrai lo ZIP e carica TUTTI i file e le cartelle nella radice del repository GitHub Pages (inclusi game.js, assets e icons).
+2. Sostituisci index.html, game.js, sw.js e tutti i file esistenti.
+3. Attendi la pubblicazione di GitHub Pages, poi chiudi e riapri la pagina o web app.
+4. La prima apertura richiede una connessione Internet per scaricare Three.js e GLTFLoader.
+
+NOTA: non testato su iPhone reale. Se permane il blocco, controllare che i CDN non siano bloccati dalla rete/browser e che GitHub Pages non stia servendo versioni vecchie dalla cache.

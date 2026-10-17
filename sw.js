@@ -1,6 +1,6 @@
 // THE FIRST SPARK Alpha 0.17 — update network-first, prevents stale 0.9/0.10.
-const CACHE='first-spark-alpha017-0170';
-const SHELL=['./','./index.html','./game.js?v=0170','./style.css?v=0170','./manifest.webmanifest','./icons/cover.jpg'];
+const CACHE='first-spark-alpha017-fix0171';
+const SHELL=['./','./index.html','./game.js?v=0171','./style.css?v=0171','./manifest.webmanifest','./icons/cover.jpg'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
   const cache=await caches.open(CACHE);
   await Promise.allSettled(SHELL.map(url=>cache.add(url)));
@@ -16,10 +16,10 @@ self.addEventListener('fetch',event=>{
   if(request.method!=='GET'||new URL(request.url).origin!==self.location.origin)return;
   event.respondWith((async()=>{
     const cache=await caches.open(CACHE);
-    // I GLB con ?v=0170 sono immutabili: riutilizza la cache, senza
+    // I GLB con ?v=0171 sono immutabili: riutilizza la cache, senza
     // scaricare 30 MB a ogni apertura. Il cambio versione forza un nuovo URL.
     const isVersionedModel=new URL(request.url).pathname.endsWith('.glb') &&
-      new URL(request.url).searchParams.get('v')==='0170';
+      new URL(request.url).searchParams.get('v')==='0171';
     if(isVersionedModel){
       const existing=await cache.match(request);
       if(existing)return existing;

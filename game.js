@@ -7,7 +7,7 @@ const loading = $('#loading');
 const hint = $('#load-note');
 let THREE;
 try {
-  try { THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js'); }
+  try { THREE = await import('three'); }
   catch (_) { THREE = await import('https://unpkg.com/three@0.160.1/build/three.module.js'); }
   init();
 } catch (err) {
@@ -991,7 +991,13 @@ function init(){
       hint.textContent='Preparazione del motore 3D…';
       let module;
       try{module=await import('https://cdn.jsdelivr.net/npm/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
-      catch(_){module=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js');}
+      catch(primaryError){
+        console.warn('GLTFLoader jsDelivr non disponibile', primaryError);
+        try { module=await import('https://unpkg.com/three@0.160.1/examples/jsm/loaders/GLTFLoader.js'); }
+        catch(secondaryError){
+          throw new Error('Impossibile importare GLTFLoader. Controlla la connessione ai CDN jsDelivr/unpkg e che GitHub Pages abbia pubblicato tutti i file. '+String(secondaryError.message||secondaryError));
+        }
+      }
       const loader=new module.GLTFLoader();enemyLoader=loader;
       assetsTotal=4+Object.keys(modelSources).length; // mago, slime, goblin, boss + ambientazione
       async function countTask(task){
@@ -1027,7 +1033,7 @@ function init(){
       loading.classList.add('hide');
     }catch(error){
       console.error('Errore caricamento',error);
-      hint.textContent='Caricamento interrotto: '+String(error.message||error).slice(0,110)+'. Aggiorna la pagina.';
+      hint.textContent='Errore caricamento motore 3D: '+String(error.message||error).slice(0,180)+'. Controlla la connessione, poi ricarica.';
       hint.style.color='#ffe2a5';
     }
   }
