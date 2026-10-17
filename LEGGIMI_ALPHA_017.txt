@@ -1,0 +1,19 @@
+THE FIRST SPARK — ALPHA 0.17 (GitHub Pages)
+
+NUOVO:
+- Goblin animato: modello fornito dall'utente, rig 70 articolazioni, clip Walking e Running. Ottimizzato da 15,38 MB a 2,51 MB, con skin e animazioni mantenute.
+- Ogni Goblin ha scheletro e mixer di animazione indipendenti. Idle neutra sintetizzata dal ciclo di camminata; cambio automatico Idle/Walking/Running.
+- Mago ridimensionato a 1,90 unita' di altezza e ritorno alla posa neutra quando fermo, senza congelare l'ultimo frame.
+- Eliminate le torri GLB dal campo e le colonne/rovine presso l'uscita del ponte; ponte libero.
+- Rocce procedurali rotonde sostituite da Roccia media e Sasso grande, modelli Meshy originali in versione mobile; collisioni associate ai GLB caricati.
+- Conservati avamposto Goblin ampliato, menu pausa e salvataggio, Boss 35 HP con fase 2, amuleto, caricamento minimo 15 s.
+- Cache aggiornata a 0.17 per evitare vecchie versioni. Salvataggi 0.16 ancora compatibili sullo stesso dominio e browser.
+
+INSTALLAZIONE:
+Estrarre TUTTI i file dello ZIP nella root del repository GitHub Pages e sostituire i precedenti. Ricaricare la pagina (eventualmente chiudere e riaprire la web app).
+
+NOTE:
+- Le clip originali fornite per Mago e Goblin contengono solo Walking e Running. Le pose Idle sono sintetizzate; attacco/morte richiedono clip dedicate per una vera animazione scheletrica.
+- Gli asset Three.js si scaricano via CDN: per il primo avvio serve Internet.
+- Caricamento di 15 secondi MINIMI, non massimi; puo' durare di piu' su reti lente.
+- La build e' stata verificata staticamente, non testata su iPhone reale.

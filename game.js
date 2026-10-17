@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.16 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
+/* THE FIRST SPARK — Alpha 0.17 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -647,7 +647,7 @@ function init(){
     const plank=mesh(new THREE.BoxGeometry(.31,.115,3.9),i%3?em.woodLight:em.wood,riverBridge,[x,.047,0]);
     plank.rotation.y=Math.sin(i*1.9)*.015;
   }
-  // 0.16: nessun paletto o parapetto vicino al ponte: tavolato completamente libero.
+  // 0.17: nessun paletto o parapetto vicino al ponte: tavolato completamente libero.
   // Cespugli e canneti delle sponde. Istanziare evita decine di draw-call.
   const bushGeo=new THREE.IcosahedronGeometry(1,1),bushM=new THREE.InstancedMesh(bushGeo,em.shrub,66);
   const reeds=new THREE.InstancedMesh(new THREE.ConeGeometry(.075,.78,5),em.reed,92);
@@ -776,21 +776,8 @@ function init(){
     const a=i*Math.PI/2+.5;
     const log=mesh(new THREE.CylinderGeometry(.27,.30,.43,9),em.wood,camp,[Math.cos(a)*1.65,.22,Math.sin(a)*1.65-.4]);log.rotation.z=Math.PI/2;
   }
-  // Antiche rovine attorno al cristallo: forme neutre, indipendenti dai futuri GLB.
-  const ruins=new THREE.Group();ruins.position.set(9,0,1.45);env.add(ruins);
-  function ruinedColumn(x,z,height){
-    const c=new THREE.Group();c.position.set(x,0,z);ruins.add(c);
-    mesh(new THREE.CylinderGeometry(.39,.45,.23,8),em.darkStone,c,[0,.12,0]);
-    mesh(new THREE.CylinderGeometry(.25,.31,height,8),em.slate,c,[0,.25+height/2,0]);
-    mesh(new THREE.CylinderGeometry(.39,.32,.19,8),em.darkStone,c,[0,.25+height+.095,0]);
-    ball(c,em.moss,[.17,.17+height,.11],[.22,.07,.23],true,false);
-  }
-  // I pilastri più vicini all'uscita del ponte sono rimossi.
-  ruinedColumn(2.1,-1.65,1.75);ruinedColumn(2.2,1.9,.82);
-  for(let i=0;i<9;i++){
-    const a=i*6.283/9,r=2.5+rand(i*13)*.35;
-    mesh(new THREE.BoxGeometry(.55,.18,.44),em.slateEdge,ruins,[Math.cos(a)*r,.09,Math.sin(a)*r]).rotation.y=a;
-  }
+  // 0.17: rimosse le colonne/torri delle rovine dopo il ponte.
+  // Il ponte e la strada verso il campo rimangono liberi.
   // Molo e attrezzi accanto al laghetto esistente.
   const dock=new THREE.Group();dock.position.set(-12.0,0,7.7);dock.rotation.y=-.36;env.add(dock);
   for(let i=0;i<7;i++)localBox(dock,i%2?em.woodLight:em.wood,(i-3)*.34,.11,0,.31,.13,1.55);
@@ -902,25 +889,63 @@ function init(){
   // nemici iniziali non sono pronti. Gli asset decorativi arrivano dopo.
   let enemyLoader=null;
   let criticalAssetsReady=false;
-  let heroMixer=null,heroWalk=null,heroRun=null,heroCurrentAction=null;
+  // Sintesi di una Idle stabile dalla media delle pose del ciclo Walking.
+  // Le animazioni Meshy fornite contengono soltanto Walking e Running.
+  function makeNeutralIdle(clip){
+    if(!clip)return null;
+    const tracks=[];
+    for(const track of clip.tracks){
+      const stride=track.getValueSize(),values=track.values,n=track.times.length;
+      if(!stride||!n)continue;
+      const avg=new Array(stride).fill(0);
+      for(let i=0;i<n;i++){
+        let sign=1;
+        if(stride===4&&track.name.endsWith('.quaternion')&&i>0){
+          let dot=0;for(let j=0;j<4;j++)dot+=values[j]*values[i*4+j];
+          if(dot<0)sign=-1;
+        }
+        for(let j=0;j<stride;j++)avg[j]+=sign*values[i*stride+j]/n;
+      }
+      if(stride===4&&track.name.endsWith('.quaternion')){
+        const mag=Math.hypot(...avg)||1;for(let j=0;j<4;j++)avg[j]/=mag;
+      }
+      tracks.push(new track.constructor(track.name,[0,1],[...avg,...avg]));
+    }
+    return new THREE.AnimationClip('Idle_neutra',1,tracks);
+  }
+  function cloneRiggedScene(source){
+    // Object3D.clone() da solo non rimappa le ossa di uno SkinnedMesh.
+    const clone=source.clone(true),sourceNodes=[],cloneNodes=[];
+    source.traverse(n=>sourceNodes.push(n));clone.traverse(n=>cloneNodes.push(n));
+    const cloned=new Map(sourceNodes.map((n,i)=>[n,cloneNodes[i]]));
+    for(let i=0;i<sourceNodes.length;i++){
+      const original=sourceNodes[i],copy=cloneNodes[i];
+      if(!original.isSkinnedMesh)continue;
+      const bones=original.skeleton.bones.map(b=>cloned.get(b));
+      if(bones.some(b=>!b))throw Error('Scheletro Goblin incompleto nella clonazione');
+      copy.bind(new THREE.Skeleton(bones,original.skeleton.boneInverses.map(m=>m.clone())),original.bindMatrix.clone());
+    }
+    return clone;
+  }
+  let heroMixer=null,heroWalk=null,heroRun=null,heroIdle=null,heroCurrentAction=null;
   function updateHeroAnimation(dt,movement){
     if(!heroMixer)return;
-    const wanted=movement>.72&&heroRun?heroRun:heroWalk;
+    const wanted=movement<.08?heroIdle:(movement>.72&&heroRun?heroRun:heroWalk);
     if(wanted&&heroCurrentAction!==wanted){
-      if(heroCurrentAction)heroCurrentAction.fadeOut(.20);
-      wanted.reset().fadeIn(.20).play();heroCurrentAction=wanted;
+      if(heroCurrentAction)heroCurrentAction.fadeOut(.24);
+      wanted.reset().fadeIn(.24).play();heroCurrentAction=wanted;
     }
-    if(heroCurrentAction)heroCurrentAction.paused=movement<.08;
-    if(movement>.08)heroMixer.update(dt);
+    // Anche quando ci si ferma il mixer avanza: non rimane bloccato nell'ultima posa.
+    heroMixer.update(dt);
   }
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0160',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0170',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
     const center=bounds.getCenter(new V());
     if(!size.y||!Number.isFinite(size.y))throw Error('Dimensioni GLB del mago non valide');
-    const scale=2.72/size.y;
+    const scale=1.90/size.y; // 0.17: dimensioni coerenti con i Goblin e il mondo
     model.scale.setScalar(scale);
     model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
     model.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
@@ -932,7 +957,10 @@ function init(){
       if(walk)heroWalk=heroMixer.clipAction(walk);
       if(run)heroRun=heroMixer.clipAction(run);
       if(!heroWalk&&gltf.animations[0])heroWalk=heroMixer.clipAction(gltf.animations[0]);
-      for(const action of [heroWalk,heroRun])if(action){action.setLoop(THREE.LoopRepeat);action.clampWhenFinished=false;}
+      const idleClip=makeNeutralIdle(walk||gltf.animations[0]);
+      if(idleClip)heroIdle=heroMixer.clipAction(idleClip);
+      for(const action of [heroIdle,heroWalk,heroRun])if(action){action.setLoop(THREE.LoopRepeat);action.clampWhenFinished=false;}
+      if(heroIdle){heroIdle.play();heroCurrentAction=heroIdle;heroMixer.update(0);}
       console.info('Animazioni scheletriche del mago:',gltf.animations.map(a=>a.name));
     }
     // Forza l'inizializzazione delle risorse grafiche prima di mostrare il menu.
@@ -1008,14 +1036,14 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0160',
-    goblin_tower:'./assets/goblin_tower.glb?v=0160',
-    goblin_tent:'./assets/goblin_tent.glb?v=0160',
-    boat:'./assets/boat.glb?v=0160',palm:'./assets/palm.glb?v=0160',
-    pine:'./assets/pine.glb?v=0160',tree:'./assets/tree.glb?v=0160',
-    bow:'./assets/bow.glb?v=0160',dagger:'./assets/dagger.glb?v=0160',mace:'./assets/mace.glb?v=0160'
+    fort_open:'./assets/fort_open.glb?v=0170',
+    goblin_tent:'./assets/goblin_tent.glb?v=0170',
+    boat:'./assets/boat.glb?v=0170',palm:'./assets/palm.glb?v=0170',
+    pine:'./assets/pine.glb?v=0170',tree:'./assets/tree.glb?v=0170',
+    bow:'./assets/bow.glb?v=0170',dagger:'./assets/dagger.glb?v=0170',mace:'./assets/mace.glb?v=0170',
+    rock_mid:'./assets/rock_mid.glb?v=0170',rock_big:'./assets/rock_big.glb?v=0170'
   };
-  // Alpha 0.16: un intero quadrante e' dedicato all'avamposto Goblin.
+  // Alpha 0.17: un intero quadrante e' dedicato all'avamposto Goblin.
   // Palizzata continua sui bordi, con varchi centrali a sud e a nord.
   const goblinDistrict=new THREE.Group();goblinDistrict.name='Distretto_Goblin_0_16';env.add(goblinDistrict);
   const campFloor=mesh(new THREE.PlaneGeometry(22.0,18.4),mat('#8b8265',1),goblinDistrict,[16,-.026,-8.5],[1,1,1],false);
@@ -1049,15 +1077,23 @@ function init(){
   // Disposizione ordinata: roccaforte aperta = ingresso del campo;
   // torri agli angoli, tende a lati del focolare, palizzate sul perimetro.
   // Arena Boss ricostruita a moduli per eliminare geometrie deformate.
+  // 0.17: rocce GLB originali ottimizzate (Roccia media e Sasso grande).
+  // Niente sassi tondeggianti procedurali: fallback spigoloso solo se GLB manca.
+  const rockLandmarks=[
+    [-18.7,5.9,1.75,.30],[-15.2,-3.6,1.55,1.1],[-11.0,-7.3,1.9,.5],
+    [-8.0,-9.1,1.45,1.8],[-3.8,5.7,1.65,.3],[.2,-7.0,1.6,1.0],
+    [9.5,5.2,1.65,2.2],[23.8,-3.8,1.75,1.2],[-21.0,20.8,1.35,.5]
+  ];
+
   const environmentSlots=[
     // Pianta leggibile: ingresso a sud, piazza/fuoco al centro,
     // tende simmetriche a est/ovest, torri ai lati del portale,
     // recinzione perimetrale con varco centrale libero.
     ['fort_open',[16,0,-14.5],5.8,0],
-    ['goblin_tower',[7.8,0,-13.5],3.5,.08],
-    ['goblin_tower',[24.2,0,-13.5],3.5,-.08],
     ['goblin_tent',[9.5,0,-7.8],2.05,.12],
     ['goblin_tent',[22.5,0,-7.8],2.05,-.12],
+    // Rocce modellate in 3D: gli slot sostituiscono i sassi sferici precedenti.
+    ...rockLandmarks.map(([x,z,sz,rot],i)=>[i===2||i===6||i===7?'rock_big':'rock_mid',[x,0,z],sz*1.06,rot]),
     ['boat',[-20.6,.035,16.1],1.10,.18],
     ['palm',[-21.7,0,18.2],4.45,.25],
     ['palm',[-15.2,0,18.9],4.75,1.62],
@@ -1088,32 +1124,13 @@ function init(){
     ['tree',[10.3,0,-9.8],5.1,.4],
     ['tree',[24.8,0,-5.3],5.0,1.2]
   ];
-  // 0.15: rocce scenografiche VISIBILI, indipendenti dal GLB facoltativo.
-  // Queste forme sostituiscono il GLB roccia che nelle versioni precedenti
-  // risultava invisibile; anche le collisioni ora corrispondono alle mesh.
-  const rockLandmarks=[
-    [-18.7,5.9,1.75,.30],[-15.2,-3.6,1.55,1.1],[-11.0,-7.3,1.9,.5],
-    [-8.0,-9.1,1.45,1.8],[-3.8,5.7,1.65,.3],[.2,-7.0,1.6,1.0],
-    [9.5,5.2,1.65,2.2],[23.8,-3.8,1.75,1.2],[-21.0,20.8,1.35,.5]
-  ];
-  const visibleRockMat=mat('#adb5a8',.97,{flatShading:true});
-  const visibleRockShade=mat('#7e9186',.96,{flatShading:true});
-  for(const [x,z,sz,rot] of rockLandmarks){
-    const stone=mesh(new THREE.DodecahedronGeometry(1,1),visibleRockMat,world,
-      [x,sz*.43,z],[sz*.80,sz*.59,sz*.71],false);
-    stone.rotation.set(.10,rot,.10);
-    const foot=mesh(new THREE.DodecahedronGeometry(1,0),visibleRockShade,world,
-      [x+sz*.43,sz*.17,z+sz*.32],[sz*.40,sz*.28,sz*.35],false);
-    foot.rotation.y=rot*.7;
-  }
   // Alpha 0.13: collisioni leggere indipendenti dai poligoni GLB.
   // Cerchi per tronchi/rocce, rettangoli orientati per edifici e recinti.
   // Sono registrate SOLO quando il modello relativo viene caricato.
   const solidCircles=[],solidBoxes=[];
   const PLAYER_RADIUS=.37;
   function addCircle(x,z,r){solidCircles.push({x,z,r});}
-  // Collisioni SOLO sulle rocce che vengono realmente disegnate.
-  for(const [x,z,sz] of rockLandmarks)addCircle(x,z,sz*.55);
+  // Collider delle rocce aggiunti solo dopo che il GLB risulta visibile.
   function addBox(x,z,hx,hz,angle=0){
     solidBoxes.push({x,z,hx,hz,c:Math.cos(angle),s:Math.sin(angle)});
   }
@@ -1127,7 +1144,7 @@ function init(){
     else if(key==='pine')addCircle(x,z,.52);
     else if(key==='tree')addCircle(x,z,.62);
     else if(key==='palm')addCircle(x,z,.43);
-    else if(key==='rock_mid'&&height>=.60)addCircle(x,z,Math.max(.24,height*.44));
+    else if((key==='rock_mid'||key==='rock_big')&&height>=.60)addCircle(x,z,Math.max(.24,height*.49));
     else if(key==='goblin_tower')addCircle(x,z,1.05);
     else if(key==='goblin_tent')addBox(x,z,1.02,1.02,angle);
     else if(key==='goblin_fence')addBox(x,z,1.74,.25,angle);
@@ -1235,14 +1252,14 @@ function init(){
           weaponAssets.mace=scene;
         }
       }else{
-        const heights={pine:5.25,palm:4.5,tree:5.1,rock_mid:.82,boat:1.25,
+        const heights={pine:5.25,palm:4.5,tree:5.1,rock_mid:1.10,rock_big:1.10,boat:1.25,
           fort_open:5.25,goblin_tower:3.9,goblin_tent:2.25,goblin_fence:2.05};
         normalizeModel(scene,heights[key]);
         for(const [name,pos,height,rotation] of environmentSlots){
           if(name!==key)continue;
           const instance=scene.clone(true),holder=new THREE.Group();
           holder.position.set(...pos);holder.rotation.y=rotation;
-          if(key==='rock_mid')holder.position.y=.055;
+          if(key==='rock_mid'||key==='rock_big')holder.position.y=.025;
           // L'altezza indicata nello slot ora si applica a TUTTI i modelli.
           // Nella 0.10 solo le rocce erano scalate: la roccaforte del Boss
           // rimaneva minuscola anche modificando l'altezza nella tabella.
@@ -1265,11 +1282,11 @@ function init(){
       loadedAssets.add(key);updateAssetStatus();
     }catch(err){
       console.warn('Asset facoltativo non caricato:',key,err);
-      if(key==='rock_mid'){
+      if(key==='rock_mid'||key==='rock_big'){
         // Rocce di emergenza se il GLB non viene caricato dal browser.
         for(const [name,pos,height,rotation] of environmentSlots){
-          if(name!=='rock_mid')continue;
-          const stone=mesh(new THREE.DodecahedronGeometry(.7,0),em.slate,world,
+          if(name!==key)continue;
+          const stone=mesh(new THREE.IcosahedronGeometry(.7,0),em.slate,world,
             [pos[0],height*.33,pos[2]],[height*.78,height*.53,height*.65],false);
           stone.rotation.y=rotation;
           registerModelCollision(key,pos,height,rotation);
@@ -1294,9 +1311,20 @@ function init(){
   function attachDagger(e){
     if(e.userData.daggerAttached||!weaponAssets.dagger)return;
     const copy=weaponAssets.dagger.clone(true);
-    // Posizione indicativa: il Goblin non e ancora riggato.
-    copy.position.x+=.60;copy.position.y+=.63;copy.position.z+=.15;
-    copy.rotation.z=-.65;e.userData.body.add(copy);e.userData.daggerAttached=true;
+    const rig=e.userData.visual;
+    const rightHand=rig?.getObjectByName('RightHand')||rig?.getObjectByName('mixamorig:RightHand');
+    if(rightHand){
+      // L'arma segue realmente il polso animato, senza fluttuare accanto al corpo.
+      const grip=new THREE.Group();
+      grip.position.set(.015,-.045,.015);
+      grip.rotation.set(Math.PI*.5,0,Math.PI*.5);
+      grip.scale.setScalar(.78);
+      rightHand.add(grip);grip.add(copy);
+    }else{
+      copy.position.x+=.60;copy.position.y+=.63;copy.position.z+=.15;
+      copy.rotation.z=-.65;e.userData.body.add(copy);
+    }
+    e.userData.daggerAttached=true;
   }
   async function loadDecorAssets(loader){
     for(const key of Object.keys(modelSources)){
@@ -1327,28 +1355,49 @@ function init(){
   }
   // Nemici Meshy: manteniamo il corpo provvisorio come fallback fino al caricamento GLB.
   const enemyAssets={};
+  function setEnemyAnimation(data,name){
+    if(!data.animMixer)return;
+    const actions=data.animActions;
+    const next=actions[name]||actions.idle||actions.walk;
+    if(next&&next!==data.animCurrent){
+      if(data.animCurrent)data.animCurrent.fadeOut(.20);
+      next.reset().fadeIn(.20).play();data.animCurrent=next;
+    }
+  }
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0160',goblin:'./goblin-ottimizzato.glb?v=0160',boss:'./assets/boss.glb?v=0160'};
+    const paths={slime:'./slime-verde.glb?v=0170',goblin:'./assets/goblin-animato.glb?v=0170',boss:'./assets/boss.glb?v=0170'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
-    const scene=gltf.scene;
-    const box=new THREE.Box3().setFromObject(scene);
+    const model=gltf.scene;
+    const box=new THREE.Box3().setFromObject(model);
     const size=box.getSize(new V());
     if(!size.y||!Number.isFinite(size.y))throw Error('Dimensioni GLB non valide: '+type);
-    const scale=(type==='boss'?3.25:type==='goblin'?1.85:1.22)/size.y;
-    scene.scale.setScalar(scale);
-    scene.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
-    enemyAssets[type]=scene;
+    const scale=(type==='boss'?3.25:type==='goblin'?1.80:1.22)/size.y;
+    model.scale.setScalar(scale);
+    model.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
+    enemyAssets[type]={scene:model,animations:gltf.animations||[]};
     for(const e of enemies)if(e.userData.kind===type)applyEnemyAsset(e);
-    console.info('Modello nemico pronto:',type);
+    console.info('Modello nemico pronto:',type,'animazioni:',gltf.animations.map(a=>a.name));
   }
   function applyEnemyAsset(e){
-    const data=e.userData,source=enemyAssets[data.kind];
-    if(!source||data.meshyLoaded)return;
+    const data=e.userData,asset=enemyAssets[data.kind];
+    if(!asset||data.meshyLoaded)return;
     data.body.clear();
-    const visual=source.clone(true);
+    const visual=data.kind==='goblin'?cloneRiggedScene(asset.scene):asset.scene.clone(true);
     visual.traverse(o=>{if(o.isMesh){o.castShadow=false;o.receiveShadow=true;}});
-    data.body.add(visual);data.meshyLoaded=true;
+    data.body.add(visual);data.meshyLoaded=true;data.visual=visual;
+    if(data.kind==='goblin'&&asset.animations.length){
+      const mixer=new THREE.AnimationMixer(visual);
+      const walking=asset.animations.find(a=>/walk/i.test(a.name));
+      const running=asset.animations.find(a=>/run/i.test(a.name));
+      const idle=makeNeutralIdle(walking||asset.animations[0]);
+      data.animMixer=mixer;
+      data.animActions={idle:idle?mixer.clipAction(idle):null,
+        walk:walking?mixer.clipAction(walking):null,
+        run:running?mixer.clipAction(running):null};
+      if(data.animActions.idle){data.animActions.idle.play();data.animCurrent=data.animActions.idle;}
+      mixer.update(0);
+    }
     if(data.kind==='goblin')attachDagger(e);
   }
   function goblin(x,z,seed){
@@ -1363,7 +1412,7 @@ function init(){
   }
   function bossGoblin(x,z,seed){
     const e=slime(x,z,seed);
-    e.userData.kind='boss';e.userData.hp=35;e.userData.maxHp=35; // 0.16: 35 HP
+    e.userData.kind='boss';e.userData.hp=35;e.userData.maxHp=35; // 0.17: 35 HP
     e.userData.speed=.91;e.userData.attack=1.3;e.userData.specialCooldown=6.0;e.userData.phaseTwo=false;
     e.userData.life.position.y=3.5;
     e.userData.fill.material=e.userData.fill.material.clone();
@@ -1421,7 +1470,7 @@ function init(){
     {id:'fire',icon:'🔥',name:'Frecce di fuoco',desc:'Sblocca le frecce infuocate',max:1,apply:()=>{element='fire';refreshElement()}},
     {id:'ice',icon:'❄️',name:'Frecce di gelo',desc:'Sblocca le frecce rallentanti',max:1,apply:()=>{element='ice';refreshElement()}}
   ];
-  // Alpha 0.16: salvataggio locale versionato, nessun invio a server.
+  // Alpha 0.17: salvataggio locale versionato, nessun invio a server.
   const SAVE_KEY='the-first-spark-save-v016';
   const AUDIO_KEY='the-first-spark-audio-v016';
   let checkpointId='beach',lastSavedAt=0;
@@ -1888,9 +1937,16 @@ function init(){
         data.slow=Math.max(0,(data.slow||0)-dt);
         const slowFactor=data.slow>0?.55:1;
         const reach=data.kind==='boss'?1.65:1.03;
+        let actuallyMoved=false;
         if(d<9.5&&d>reach){
           const er=data.kind==='boss'?1.10:.43;
+          const beforeX=e.position.x,beforeZ=e.position.z;
           moveWithCollision(e,dx/d*data.speed*slowFactor*dt,dz/d*data.speed*slowFactor*dt,er,false);
+          actuallyMoved=Math.hypot(e.position.x-beforeX,e.position.z-beforeZ)>dt*.04;
+        }
+        if(data.animMixer){
+          setEnemyAnimation(data,actuallyMoved?(d<4.2?'run':'walk'):'idle');
+          data.animMixer.update(dt);
         }
         if(data.kind==='boss'){
           if(!data.phaseTwo&&data.hp<=data.maxHp*.5){
@@ -2015,5 +2071,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0160').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0170').catch(()=>{});
 }
