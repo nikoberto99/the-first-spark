@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.18 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
+/* THE FIRST SPARK — Alpha 0.19 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -118,18 +118,25 @@ function init(){
   islandGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(groundUV,2));
   const ground=mesh(islandGeometry,new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1,side:THREE.DoubleSide}),world,[0,-.085,0],[1,1,1],false);
   ground.rotation.x=-Math.PI/2;
-  const oceanGeometry=new THREE.PlaneGeometry(160,140,78,68);
+  const oceanGeometry=new THREE.PlaneGeometry(160,140,45,40);
   oceanGeometry.rotateX(-Math.PI/2);
-  const oceanMaterial=mat('#3c9bb1',.24,{metalness:.10,side:THREE.DoubleSide});
+  // 0.19: acqua OPACA con pigmento azzurro. La texture delle onde 0.18
+  // aveva lo sfondo trasparente: usata come mappa colore anneriva il mare.
+  // MeshBasicMaterial evita che il mare diventi nero con l'illuminazione mobile.
+  const oceanMaterial=new THREE.MeshBasicMaterial({color:'#ffffff',side:THREE.DoubleSide});
   const ocean=mesh(oceanGeometry,oceanMaterial,world,[0,-.19,0],[1,1,1],false);
-  ocean.name='Mare_intorno_all_isola_018';
+  ocean.name='Mare_azzurro_animato_019';
   // Schiuma costiera: un'unica fascia leggera che segue il perimetro.
   const shoreVertices=[],shoreIndices=[];
   for(let i=0;i<islandOutline.length;i++){
     const [x,z]=islandOutline[i],d=Math.hypot(x,z)||1;
     shoreVertices.push(x,-.072,z,x+x/d*.72,-.079,z+z/d*.72);
     const k=i*2,l=((i+1)%islandOutline.length)*2;
-    shoreIndices.push(k,k+1,l,k+1,l+1,l);
+    // Lascia aperte le due foci: nessuna linea di schiuma che tagli il fiume.
+    const next=islandOutline[(i+1)%islandOutline.length];
+    const atMouth=Math.abs(x-4.1)<3.0&&Math.abs(next[0]-4.1)<3.0&&
+      (z< -26||z>28)&& (next[1]< -26||next[1]>28);
+    if(!atMouth)shoreIndices.push(k,k+1,l,k+1,l+1,l);
   }
   const shoreGeometry=new THREE.BufferGeometry();
   shoreGeometry.setAttribute('position',new THREE.Float32BufferAttribute(shoreVertices,3));
@@ -229,8 +236,29 @@ function init(){
   const waterPattern=new THREE.CanvasTexture(waterPatternCanvas);
   waterPattern.wrapS=waterPattern.wrapT=THREE.RepeatWrapping;
   waterPattern.repeat.set(2.2,2.2);waterPattern.colorSpace=THREE.SRGBColorSpace;
-  const oceanPattern=waterPattern.clone();oceanPattern.needsUpdate=true;
-  oceanPattern.repeat.set(18,16);oceanMaterial.map=oceanPattern;oceanMaterial.needsUpdate=true;
+  // Tessitura colorata: niente trasparenza nella mappa diffuse del mare.
+  const seaCanvas=document.createElement('canvas');seaCanvas.width=seaCanvas.height=512;
+  const seaCtx=seaCanvas.getContext('2d');
+  seaCtx.fillStyle='#268dbb';seaCtx.fillRect(0,0,512,512);
+  const seaGradient=seaCtx.createLinearGradient(0,0,512,512);
+  seaGradient.addColorStop(0,'rgba(92,198,218,.24)');
+  seaGradient.addColorStop(.48,'rgba(19,105,170,.09)');
+  seaGradient.addColorStop(1,'rgba(83,185,214,.18)');
+  seaCtx.fillStyle=seaGradient;seaCtx.fillRect(0,0,512,512);
+  for(let i=0;i<155;i++){
+    const x=rand(i*11.31+21)*512,y=rand(i*17.17+18)*512;
+    seaCtx.strokeStyle=i%4===0?'rgba(215,252,255,.16)':'rgba(174,239,248,.075)';
+    seaCtx.lineWidth=.8+rand(i*3.9)*1.6;
+    seaCtx.beginPath();seaCtx.moveTo(x,y);
+    seaCtx.quadraticCurveTo(x+10,y-2,x+25+rand(i*5)*20,y+1);
+    seaCtx.stroke();
+  }
+  const oceanPattern=new THREE.CanvasTexture(seaCanvas);
+  oceanPattern.colorSpace=THREE.SRGBColorSpace;
+  oceanPattern.wrapS=oceanPattern.wrapT=THREE.RepeatWrapping;
+  oceanPattern.repeat.set(13,12);
+  oceanPattern.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  oceanMaterial.map=oceanPattern;oceanMaterial.needsUpdate=true;
   const pondWaves=makePondSurface(3.27,2.04,.075,
     new THREE.MeshBasicMaterial({color:'#e5ffec',map:waterPattern,transparent:true,opacity:.80,
       depthWrite:false,side:THREE.DoubleSide}));
@@ -523,30 +551,11 @@ function init(){
   bossGround3.material=mat('#d5d2bd',.97,{map:stoneTexture});
   bossGround2.material=mat('#c7bda9',.97,{map:stoneTexture});
   const arenaGold=mat('#bd985d',.56,{metalness:.15});
+  // 0.19: niente piu' 40 muri a cubo e torri a cilindro. L'intera
+  // cinta dell'arena sara' il modello originale Meshy Roccaforte V2,
+  // versione MOBILE 85k triangoli, caricato una volta in loadOneAsset.
+  // La pavimentazione, i telegraph, il Boss e il raggio giocabile restano.
   const arenaMarkerStones=[];
-  for(let i=0;i<40;i++){
-    const a=(i+.5)*Math.PI*2/40;
-    if(Math.abs(a-Math.PI/2)<.19)continue; // cancello di ingresso a sud (+Z)
-    const x=Math.cos(a)*16.45,z=Math.sin(a)*15.75;
-    const wall=mesh(new THREE.BoxGeometry(2.55,3.35,.78),
-      i%5===0?arenaStoneLight:arenaStone,bossArena,[x,1.65,z],[1,1,1],false);
-    wall.rotation.y=-a-Math.PI/2;
-    const cap=mesh(new THREE.BoxGeometry(2.6,.27,.9),arenaStoneDark,bossArena,[x,3.37,z],[1,1,1],false);
-    cap.rotation.y=wall.rotation.y;
-    if(i%2===0){
-      const crenel=mesh(new THREE.BoxGeometry(.78,.62,.9),arenaStoneLight,bossArena,[x,3.78,z],[1,1,1],false);
-      crenel.rotation.y=wall.rotation.y;
-    }
-    arenaMarkerStones.push(wall);
-  }
-  // Due torri compatte che incorniciano la soglia, senza invadere l'arena.
-  for(const x of [-3.35,3.35]){
-    mesh(new THREE.CylinderGeometry(1.12,1.25,4.7,10),arenaStoneDark,bossArena,[x,2.25,15.55],[1,1,1],false);
-    mesh(new THREE.CylinderGeometry(1.30,1.30,.30,10),arenaStoneLight,bossArena,[x,4.68,15.55],[1,1,1],false);
-    mesh(new THREE.ConeGeometry(1.36,1.55,10),arenaWood,bossArena,[x,5.58,15.55],[1,1,1],false);
-  }
-  const gateLintel=mesh(new THREE.BoxGeometry(4.7,.95,.90),arenaStoneLight,bossArena,[0,4.4,15.55],[1,1,1],false);
-  mesh(new THREE.BoxGeometry(3.9,.14,.98),arenaGold,bossArena,[0,4.95,15.55],[1,1,1],false);
   // Pietre incastonate e cerchi rituali: geometrie basse, nessun groviglio.
   for(let i=0;i<20;i++){
     const a=i*Math.PI*2/20,x=Math.cos(a)*13.75,z=Math.sin(a)*13.75;
@@ -637,11 +646,14 @@ function init(){
   function riverStrip(width,material,y,phase){
     const verts=[],uv=[],idx=[],N=110,C=(material===em.waterDeep||material===em.waterLight||!!material.map)?8:1;
     for(let i=0;i<=N;i++){
-      const z=-31+i*62/N,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
+      const z=-35+i*70/N,mid=4.1+.83*Math.sin(z*.19+.3)+.28*Math.sin(z*.43);
       const w=width*(1+.08*Math.sin(z*.31));
       for(let c=0;c<=C;c++){
         const side=-1+2*c/C;
-        verts.push(mid+side*w,y,z);
+        // Alla foce l'acqua si abbassa dolcemente fino alla quota del mare.
+        const mouth=Math.max(0,Math.min(1,(Math.abs(z)-27.0)/7.0));
+        const riverY=y-mouth*(y+.155);
+        verts.push(mid+side*w,riverY,z);
         uv.push(i/N*5,c/C*2);
         if(i<N&&c<C){const a=i*(C+1)+c,b=a+C+1;
           idx.push(a,b,a+1,a+1,b,b+1);
@@ -662,6 +674,16 @@ function init(){
   riverPattern.repeat.set(1.5,1.3);
   riverStrip(1.24,new THREE.MeshBasicMaterial({map:riverPattern,color:'#b9f0e3',
     transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false}),.090,0);
+  // Piccole foci continue sopra il mare: raccordo azzurro, senza linee nere.
+  const estuaryMat=new THREE.MeshBasicMaterial({color:'#47a9c3',transparent:true,opacity:.55,
+    side:THREE.DoubleSide,depthWrite:false});
+  for(const sign of [-1,1]){
+    const mouthZ=sign===1?30.5:-30.5;
+    const mouthX=4.1+.83*Math.sin(mouthZ*.19+.3)+.28*Math.sin(mouthZ*.43);
+    const plume=mesh(new THREE.CircleGeometry(2.8,28),estuaryMat,env,
+      [mouthX,-.146,mouthZ+sign*1.1],[1,1.65,1],false);
+    plume.rotation.x=-Math.PI/2;plume.name='Foce_del_fiume_'+sign;
+  }
   // Riflessi d'acqua discreti, senza shader o effetti pesanti su iPhone.
   // Fasce luminose che scorrono realmente lungo il fiume, unite in una
   // sola geometria dinamica. Risultano visibili anche su schermi piccoli.
@@ -865,7 +887,7 @@ function init(){
   function animateEnvironment(time){
     // Onde geometriche a 12 FPS (anziché ogni frame): meno upload GPU.
     // L'animazione delle texture e delle schiume resta fluida a ogni frame.
-    if(time-lastWaterUpdate>.08){
+    if(time-lastWaterUpdate>.11){
       lastWaterUpdate=time;
       for(const w of waterMeshes){
         const a=w.geometry.attributes.position,base=w.base;
@@ -1002,7 +1024,7 @@ function init(){
     heroMixer.update(dt);
   }
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0180',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0190',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -1105,14 +1127,16 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0180',
-    goblin_fence:'./assets/goblin_fence_3d.glb?v=0180',
-    goblin_tower:'./assets/goblin_tower_3d.glb?v=0180',
-    goblin_tent:'./assets/goblin_tent.glb?v=0180',
-    boat:'./assets/boat.glb?v=0180',palm:'./assets/palm.glb?v=0180',
-    pine:'./assets/pine.glb?v=0180',tree:'./assets/tree.glb?v=0180',
-    bow:'./assets/bow.glb?v=0180',dagger:'./assets/dagger.glb?v=0180',mace:'./assets/mace.glb?v=0180',
-    rock_mid:'./assets/rock_mid.glb?v=0180',rock_big:'./assets/rock_big.glb?v=0180'
+    fort_open:'./assets/fort_open.glb?v=0190',
+    boss_arena:'./assets/arena_goblin_3d.glb?v=0190',
+    gate_back:'./assets/gate_back_3d.glb?v=0190',
+    goblin_fence:'./assets/goblin_fence.glb?v=0190',
+    goblin_tower:'./assets/goblin_tower_3d.glb?v=0190',
+    goblin_tent:'./assets/goblin_tent.glb?v=0190',
+    boat:'./assets/boat.glb?v=0190',palm:'./assets/palm.glb?v=0190',
+    pine:'./assets/pine.glb?v=0190',tree:'./assets/tree.glb?v=0190',
+    bow:'./assets/bow.glb?v=0190',dagger:'./assets/dagger.glb?v=0190',mace:'./assets/mace.glb?v=0190',
+    rock_mid:'./assets/rock_mid.glb?v=0190',rock_big:'./assets/rock_big.glb?v=0190'
   };
   // Alpha 0.18: il quadrante Goblin e' ampliato. Il perimetro usa SOLO
   // i GLB Meshy delle palizzate e delle torri, non pali cilindrici.
@@ -1157,6 +1181,9 @@ function init(){
     // Torrette 3D ai quattro angoli, palizzate 3D sui lati e tende 3D all'interno.
     ...goblinWallSlots,...goblinTowerSlots,
     ['fort_open',[16,0,-14.5],5.8,0],
+    // Modello 3D posteriore: chiude visivamente la soglia senza ostacolare
+    // il trigger di ingresso (che scatta prima, a z=-14.55).
+    ['gate_back',[16,0,-17.25],5.4,Math.PI],
     ['goblin_tent',[10.4,0,-9.0],2.20,.12],
     ['goblin_tent',[25.2,0,-9.1],2.20,-.12],
     ['goblin_tent',[10.7,0,-15.5],2.12,.34],
@@ -1214,6 +1241,7 @@ function init(){
     else if(key==='goblin_tower')addCircle(x,z,1.22);
     else if(key==='goblin_tent')addBox(x,z,1.25,1.18,angle);
     else if(key==='goblin_fence')addBox(x,z,1.83,.30,angle);
+    else if(key==='gate_back')return; // solo scenografia, il portale resta attraversabile
     else if(key==='fort_open'){
       // Il modello e un grande portale: i pilastri sono solidi,
       // ma il varco centrale resta sempre attraversabile.
@@ -1306,6 +1334,12 @@ function init(){
       if(key==='bow'){
         normalizeModel(scene,1.06);hero.bow.children.forEach(child=>{if(child!==bowGem)child.visible=false;});
         hero.bow.add(scene);
+      }else if(key==='boss_arena'){
+        // Meshy Versione 2: cinta circolare completa con strutture 3D.
+        normalizeModel(scene,7.2);
+        const holder=new THREE.Group();holder.name='Arena_Boss_Roccaforte_V2_3D';
+        holder.scale.set(2.48,1,2.04);
+        holder.add(scene);bossArena.add(holder);
       }else if(key==='dagger'||key==='mace'){
         const height=key==='dagger'?.67:1.5;
         normalizeModel(scene,height);
@@ -1321,7 +1355,7 @@ function init(){
         }
       }else{
         const heights={pine:5.25,palm:4.5,tree:5.1,rock_mid:1.10,rock_big:1.10,boat:1.25,
-          fort_open:5.25,goblin_tower:3.9,goblin_tent:2.25,goblin_fence:2.05};
+          fort_open:5.25,gate_back:5.25,goblin_tower:3.9,goblin_tent:2.25,goblin_fence:2.05};
         normalizeModel(scene,heights[key]);
         for(const [name,pos,height,rotation] of environmentSlots){
           if(name!==key)continue;
@@ -1434,7 +1468,7 @@ function init(){
   }
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0180',goblin:'./assets/goblin-animato.glb?v=0180',boss:'./assets/boss.glb?v=0180'};
+    const paths={slime:'./slime-verde.glb?v=0190',goblin:'./assets/goblin-animato.glb?v=0190',boss:'./assets/boss.glb?v=0190'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const model=gltf.scene;
     const box=new THREE.Box3().setFromObject(model);
@@ -2139,5 +2173,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0180').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0190').catch(()=>{});
 }

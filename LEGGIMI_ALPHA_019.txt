@@ -1,0 +1,12 @@
+THE FIRST SPARK - ALPHA 0.19 - MARE, OTTIMIZZAZIONE, PORTALE E ARENA 3D
+
+BASE: Alpha 0.18, con le funzionalita' 0.17.1 confermate funzionanti.
+
+1. MARE: corretto il bug della texture con sfondo trasparente che rendeva il mare quasi nero. Ora superficie azzurra opaca con gradiente e onde colorate. Geometria onde ridotta per iPhone. Le due foci del fiume sono estese oltre il bordo dell'isola, con discesa verso il livello del mare e raccordi cromatici.
+2. AVAMPOSTO: sostituito il modello palizzata 3D da 92.316 triangoli / 3,7 MB con la sua versione GLB ottimizzata da 9.000 triangoli / 1,43 MB, conservando la texture. Il modello e' ripetuto molte volte: riduzione teorica >1,5 milioni di triangoli. Torri e tende conservate.
+3. PORTALE BOSS: aggiunto un vero modello 3D di chiusura posteriore con doppia anta, travi e ferramenti. Non blocca il trigger d'ingresso.
+4. ARENA BOSS: sostituiti i 40 segmenti di muro a cubi e le torri procedurali con il modello originale Roccaforte V2 Meshy ottimizzato Mobile (85.000 triangoli). Restano terreno, effetti di combattimento, telegraph, Boss, HP, salvataggi e camera.
+
+INSTALLAZIONE: estrarre TUTTI i file nella radice del repository GitHub Pages, sostituendo i precedenti. Non caricare lo ZIP come unico file. Attendere la pubblicazione; chiudere e riaprire la web app su iPhone per aggiornare la cache.
+
+DA VERIFICARE SUL DISPOSITIVO: tonalita' del mare, foci, fluidita' avamposto, orientamento/scalatura del GLB arena e posizione della porta posteriore. I modelli sono stati verificati staticamente, non renderizzati su iPhone.
