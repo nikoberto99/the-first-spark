@@ -1,0 +1,13 @@
+THE FIRST SPARK - ALPHA 0.18 - TEST ISOLA E AVAMPOSTO
+
+Base: Alpha 0.17.1 funzionante.
+- Goblin animati ridotti da 1.80 a 1.38 m di altezza (circa -23%).
+- Avamposto ingrandito (24.8 x 20 unità) con 4 torri Meshy 3D, palizzate Meshy 3D e 4 tende Meshy 3D.
+- Varchi lasciati liberi sul percorso d'ingresso, collisioni su palizzate e torri.
+- Mappa resa un'isola irregolare circondata dal mare. Acqua del mare animata geometricamente a 12 FPS e con texture in movimento.
+- Schiuma lungo il perimetro; blocco del movimento oltre la costa.
+- Tutti i progressi e il sistema di salvataggio della 0.17.1 conservati.
+
+INSTALLAZIONE: estrarre tutti i file nella radice del repository GitHub Pages, sostituendo quelli precedenti. Attendere la pubblicazione. Su iPhone chiudere e riaprire la web app; se necessario aggiornare la pagina.
+
+DA VERIFICARE SUL DISPOSITIVO: proporzioni, orientamento dei modelli GLB delle palizzate, accessibilità del varco e prestazioni.

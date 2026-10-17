@@ -1,4 +1,4 @@
-/* THE FIRST SPARK — Alpha 0.17 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
+/* THE FIRST SPARK — Alpha 0.18 | Rigging, Boss, salvataggi, ingresso 3D, boss in area separata
    Una dimostrazione WebGL reale: personaggi e ambiente sono costruiti da mesh
    tridimensionali morbide e illuminate, senza asset 3D esterni.
    Il solo motore Three.js si carica via CDN per mantenere leggero il pacchetto. */
@@ -93,8 +93,65 @@ function init(){
     t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;
   }
   function rand(n){const v=Math.sin(n*128.237+12.4)*43758.5453;return v-Math.floor(v)}
-  const ground=mesh(new THREE.PlaneGeometry(150,150),new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1}),world,[0,-.085,0],[1,1,1],false);
+  // Alpha 0.18: una vera isola delimitata da coste irregolari, non un piano
+  // erboso infinito. Il mare resta sotto al terreno e NON copre l'arena Boss.
+  const islandCorners=[[-29,-15],[-27,-22],[-20,-27],[-9,-29],[7,-30],[22,-28],
+    [29,-23],[32,-14],[33,-3],[31,10],[27,22],[18,29],[7,32],[-8,33],
+    [-18,31],[-22,28],[-23.6,23],[-23.6,16],[-23.6,9],[-24,3],[-29,-3],[-31,-10]];
+  const islandOutline=[];
+  for(let i=0;i<islandCorners.length;i++){
+    const a=islandCorners[i],b=islandCorners[(i+1)%islandCorners.length];
+    for(let j=0;j<3;j++){
+      const t=j/3,noise=j===0?0:.17*Math.sin(i*3.8+j*1.7);
+      const nx=b[1]-a[1],nz=-(b[0]-a[0]),len=Math.hypot(nx,nz)||1;
+      islandOutline.push([a[0]*(1-t)+b[0]*t+noise*nx/len,
+        a[1]*(1-t)+b[1]*t+noise*nz/len]);
+    }
+  }
+  const islandShape=new THREE.Shape();
+  islandOutline.forEach(([x,z],i)=>i?islandShape.lineTo(x,-z):islandShape.moveTo(x,-z));
+  islandShape.closePath();
+  const islandGeometry=new THREE.ShapeGeometry(islandShape);
+  const groundPositions=islandGeometry.attributes.position;
+  const groundUV=[];
+  for(let i=0;i<groundPositions.count;i++)groundUV.push((groundPositions.getX(i)+35)/70,(groundPositions.getY(i)+35)/70);
+  islandGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(groundUV,2));
+  const ground=mesh(islandGeometry,new THREE.MeshStandardMaterial({map:grassTexture(),color:'#d5f2cb',roughness:1,side:THREE.DoubleSide}),world,[0,-.085,0],[1,1,1],false);
   ground.rotation.x=-Math.PI/2;
+  const oceanGeometry=new THREE.PlaneGeometry(160,140,78,68);
+  oceanGeometry.rotateX(-Math.PI/2);
+  const oceanMaterial=mat('#3c9bb1',.24,{metalness:.10,side:THREE.DoubleSide});
+  const ocean=mesh(oceanGeometry,oceanMaterial,world,[0,-.19,0],[1,1,1],false);
+  ocean.name='Mare_intorno_all_isola_018';
+  // Schiuma costiera: un'unica fascia leggera che segue il perimetro.
+  const shoreVertices=[],shoreIndices=[];
+  for(let i=0;i<islandOutline.length;i++){
+    const [x,z]=islandOutline[i],d=Math.hypot(x,z)||1;
+    shoreVertices.push(x,-.072,z,x+x/d*.72,-.079,z+z/d*.72);
+    const k=i*2,l=((i+1)%islandOutline.length)*2;
+    shoreIndices.push(k,k+1,l,k+1,l+1,l);
+  }
+  const shoreGeometry=new THREE.BufferGeometry();
+  shoreGeometry.setAttribute('position',new THREE.Float32BufferAttribute(shoreVertices,3));
+  shoreGeometry.setIndex(shoreIndices);shoreGeometry.computeVertexNormals();
+  const outerFoam=mesh(shoreGeometry,new THREE.MeshBasicMaterial({color:'#d4fff5',transparent:true,opacity:.29,side:THREE.DoubleSide,depthWrite:false}),world,[0,0,0],[1,1,1],false);
+  outerFoam.name='Schiuma_costiera_perimetrale';
+  function insideIsland(x,z){
+    let inside=false;
+    for(let i=0,j=islandOutline.length-1;i<islandOutline.length;j=i++){
+      const a=islandOutline[i],b=islandOutline[j];
+      if(((a[1]>z)!==(b[1]>z))&&(x<(b[0]-a[0])*(z-a[1])/(b[1]-a[1])+a[0]))inside=!inside;
+    }
+    return inside;
+  }
+  function nearIslandEdge(x,z,r){
+    for(let i=0;i<islandOutline.length;i++){
+      const a=islandOutline[i],b=islandOutline[(i+1)%islandOutline.length];
+      const dx=b[0]-a[0],dz=b[1]-a[1],t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));
+      if(Math.hypot(x-a[0]-t*dx,z-a[1]-t*dz)<r+.28)return true;
+    }
+    return false;
+  }
   // Sentiero: UN'UNICA SUPERFICIE CURVA, non piu una fila di dischi sovrapposti.
   // Alpha 0.15: UN PERCORSO leggibile dalla spiaggia alla soglia del Boss.
   // Spiaggia -> bosco -> ponte sul fiume -> campo Goblin -> ingresso 3D.
@@ -136,7 +193,7 @@ function init(){
   flatEllipse(pond,mat('#73bdc0',.25,{transparent:true,opacity:.72,depthWrite:false}),3.31,2.08,.027);
   // Superficie animata vera: 9 anelli concentrici, 64 settori,
   // piccoli spostamenti verticali senza librerie esterne.
-  const waterMeshes=[];
+  const waterMeshes=[{geometry:oceanGeometry,base:new Float32Array(oceanGeometry.attributes.position.array),type:'ocean'}];
   function makePondSurface(rx,rz,y,material){
     const vertices=[],uv=[],indices=[],rings=10,sides=64;
     for(let r=0;r<=rings;r++){
@@ -172,6 +229,8 @@ function init(){
   const waterPattern=new THREE.CanvasTexture(waterPatternCanvas);
   waterPattern.wrapS=waterPattern.wrapT=THREE.RepeatWrapping;
   waterPattern.repeat.set(2.2,2.2);waterPattern.colorSpace=THREE.SRGBColorSpace;
+  const oceanPattern=waterPattern.clone();oceanPattern.needsUpdate=true;
+  oceanPattern.repeat.set(18,16);oceanMaterial.map=oceanPattern;oceanMaterial.needsUpdate=true;
   const pondWaves=makePondSurface(3.27,2.04,.075,
     new THREE.MeshBasicMaterial({color:'#e5ffec',map:waterPattern,transparent:true,opacity:.80,
       depthWrite:false,side:THREE.DoubleSide}));
@@ -814,7 +873,9 @@ function init(){
           const j=i*3,x=base[j],y=base[j+1],z=base[j+2];
           const dy=w.type==='pond'
             ? .035*Math.sin(x*1.9+time*2.0)*Math.cos(z*2.4-time*1.6)
-            : .048*Math.sin(z*2.0-time*3.8+x*1.7)+.016*Math.cos(z*3.4-time*4.0);
+            : w.type==='ocean'
+              ? .045*Math.sin(x*.55+time*1.35)*Math.cos(z*.65-time*1.12)+.012*Math.sin(x*1.7+z*.8-time*2.2)
+              : .048*Math.sin(z*2.0-time*3.8+x*1.7)+.016*Math.cos(z*3.4-time*4.0);
           a.setY(i,y+dy);
         }
         a.needsUpdate=true;
@@ -828,6 +889,8 @@ function init(){
       lakeRings[i].material.opacity=.53*(1-phase);
     }
     waterPattern.offset.x=time*.055;waterPattern.offset.y=time*.047;
+    oceanPattern.offset.x=time*.025;oceanPattern.offset.y=-time*.034;
+    outerFoam.material.opacity=.23+.09*Math.sin(time*1.5);
     riverPattern.offset.x=-time*.28;riverPattern.offset.y=time*.06;
     for(let i=0;i<riverGlints.length;i++){
       riverGlints[i].material.opacity=.17+.14*Math.sin(time*1.5+i*.85);
@@ -939,7 +1002,7 @@ function init(){
     heroMixer.update(dt);
   }
   async function loadHeroModel(loader){
-    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0170',resolve,undefined,reject));
+    const gltf=await new Promise((resolve,reject)=>loader.load('./assets/mago-animato.glb?v=0180',resolve,undefined,reject));
     const model=gltf.scene;
     const bounds=new THREE.Box3().setFromObject(model);
     const size=bounds.getSize(new V());
@@ -1042,41 +1105,40 @@ function init(){
   // GLB originali ottimizzati per iPhone. Un solo download per modello:
   // le copie della scena condividono geometrie e texture in GPU.
   const modelSources={
-    fort_open:'./assets/fort_open.glb?v=0170',
-    goblin_tent:'./assets/goblin_tent.glb?v=0170',
-    boat:'./assets/boat.glb?v=0170',palm:'./assets/palm.glb?v=0170',
-    pine:'./assets/pine.glb?v=0170',tree:'./assets/tree.glb?v=0170',
-    bow:'./assets/bow.glb?v=0170',dagger:'./assets/dagger.glb?v=0170',mace:'./assets/mace.glb?v=0170',
-    rock_mid:'./assets/rock_mid.glb?v=0170',rock_big:'./assets/rock_big.glb?v=0170'
+    fort_open:'./assets/fort_open.glb?v=0180',
+    goblin_fence:'./assets/goblin_fence_3d.glb?v=0180',
+    goblin_tower:'./assets/goblin_tower_3d.glb?v=0180',
+    goblin_tent:'./assets/goblin_tent.glb?v=0180',
+    boat:'./assets/boat.glb?v=0180',palm:'./assets/palm.glb?v=0180',
+    pine:'./assets/pine.glb?v=0180',tree:'./assets/tree.glb?v=0180',
+    bow:'./assets/bow.glb?v=0180',dagger:'./assets/dagger.glb?v=0180',mace:'./assets/mace.glb?v=0180',
+    rock_mid:'./assets/rock_mid.glb?v=0180',rock_big:'./assets/rock_big.glb?v=0180'
   };
-  // Alpha 0.17: un intero quadrante e' dedicato all'avamposto Goblin.
-  // Palizzata continua sui bordi, con varchi centrali a sud e a nord.
-  const goblinDistrict=new THREE.Group();goblinDistrict.name='Distretto_Goblin_0_16';env.add(goblinDistrict);
-  const campFloor=mesh(new THREE.PlaneGeometry(22.0,18.4),mat('#8b8265',1),goblinDistrict,[16,-.026,-8.5],[1,1,1],false);
+  // Alpha 0.18: il quadrante Goblin e' ampliato. Il perimetro usa SOLO
+  // i GLB Meshy delle palizzate e delle torri, non pali cilindrici.
+  const goblinDistrict=new THREE.Group();goblinDistrict.name='Distretto_Goblin_0_18';env.add(goblinDistrict);
+  const campFloor=mesh(new THREE.PlaneGeometry(24.8,20.0),mat('#8b8265',1),goblinDistrict,[18.3,-.026,-11.1],[1,1,1],false);
   campFloor.rotation.x=-Math.PI/2;
-  const campClear=mesh(new THREE.PlaneGeometry(5.1,17.8),mat('#bca783',1),goblinDistrict,[16,-.016,-8.5],[1,1,1],false);
+  const campClear=mesh(new THREE.PlaneGeometry(5.6,18.8),mat('#bca783',1),goblinDistrict,[16,-.016,-11.1],[1,1,1],false);
   campClear.rotation.x=-Math.PI/2;
-  const stakeGeo=new THREE.CylinderGeometry(.17,.21,2.5,5);
-  const stakeMat=mat('#70553b',.99,{flatShading:true});
-  const stakes=[];
-  for(let z=-17.5;z<=.5;z+=.58){
-    if(z< -3.7)stakes.push([5.15,z]); // ingresso sud-ovest: ponte libero
-    stakes.push([26.85,z]);
+  // Gli slot sono generati sul bordo: ingresso a nord libero per il sentiero.
+  const goblinWallSlots=[];
+  function wallRow(x1,x2,z,gate=false){
+    const segments=Math.ceil((x2-x1)/3.7),step=(x2-x1)/segments;
+    for(let i=0;i<segments;i++){
+      const x=x1+(i+.5)*step;
+      if(gate&&x>8.8&&x<19.0)continue;
+      goblinWallSlots.push(['goblin_fence',[x,0,z],2.18,0]);
+    }
   }
-  for(let x=5.15;x<=26.85;x+=.58){
-    if(Math.abs(x-16)>2.7)stakes.push([x,-17.5]);
-    if(x<7.4||x>12.2)stakes.push([x,-2.2]); // varco sul sentiero reale
+  function wallColumn(x,z1,z2){
+    const segments=Math.ceil((z2-z1)/3.7),step=(z2-z1)/segments;
+    for(let i=0;i<segments;i++)goblinWallSlots.push(['goblin_fence',[x,0,z1+(i+.5)*step],2.18,Math.PI/2]);
   }
-  const palisade=new THREE.InstancedMesh(stakeGeo,stakeMat,stakes.length);
-  const stakeDummy=new THREE.Object3D();
-  stakes.forEach(([x,z],i)=>{
-    stakeDummy.position.set(x,1.12,z);
-    stakeDummy.rotation.y=rand(i+41)*.15;
-    stakeDummy.scale.set(1,.93+rand(i*5+7)*.16,1);
-    stakeDummy.updateMatrix();palisade.setMatrixAt(i,stakeDummy.matrix);
-  });
-  palisade.instanceMatrix.needsUpdate=true;palisade.castShadow=false;
-  goblinDistrict.add(palisade);
+  wallRow(7.5,29.5,-20.0,false);wallRow(7.5,29.5,-2.6,true);
+  wallColumn(7.5,-20,-2.6);wallColumn(29.5,-20,-2.6);
+  const goblinTowerSlots=[[8.0,-19.5],[29.0,-19.5],[8.0,-3.0],[29.0,-3.0]]
+    .map(([x,z],i)=>['goblin_tower',[x,0,z],3.95,i*Math.PI/2]);
   // I collider sono aggiunti dopo la creazione delle strutture di collisione.
   // [modello, posizione X/Y/Z, altezza, rotazione Y]
   // Biomi: spiaggia a ovest; pineta a nord-ovest; latifoglie a sud-est.
@@ -1092,12 +1154,13 @@ function init(){
   ];
 
   const environmentSlots=[
-    // Pianta leggibile: ingresso a sud, piazza/fuoco al centro,
-    // tende simmetriche a est/ovest, torri ai lati del portale,
-    // recinzione perimetrale con varco centrale libero.
+    // Torrette 3D ai quattro angoli, palizzate 3D sui lati e tende 3D all'interno.
+    ...goblinWallSlots,...goblinTowerSlots,
     ['fort_open',[16,0,-14.5],5.8,0],
-    ['goblin_tent',[9.5,0,-7.8],2.05,.12],
-    ['goblin_tent',[22.5,0,-7.8],2.05,-.12],
+    ['goblin_tent',[10.4,0,-9.0],2.20,.12],
+    ['goblin_tent',[25.2,0,-9.1],2.20,-.12],
+    ['goblin_tent',[10.7,0,-15.5],2.12,.34],
+    ['goblin_tent',[25.0,0,-15.6],2.12,-.35],
     // Rocce modellate in 3D: gli slot sostituiscono i sassi sferici precedenti.
     ...rockLandmarks.map(([x,z,sz,rot],i)=>[i===2||i===6||i===7?'rock_big':'rock_mid',[x,0,z],sz*1.06,rot]),
     ['boat',[-20.6,.035,16.1],1.10,.18],
@@ -1140,10 +1203,7 @@ function init(){
   function addBox(x,z,hx,hz,angle=0){
     solidBoxes.push({x,z,hx,hz,c:Math.cos(angle),s:Math.sin(angle)});
   }
-  // Palizzata esterna, lontana dalla strada centrale.
-  addBox(5.15,-10.6,.20,6.9);addBox(26.85,-8.5,.20,9.0);
-  addBox(9.1,-17.5,3.95,.22);addBox(22.9,-17.5,3.95,.22);
-  addBox(6.2,-2.2,1.05,.22);addBox(19.5,-2.2,7.3,.22);
+  // Collisioni aggiunte per ciascun GLB caricato, senza muri invisibili.
   function registerModelCollision(key,pos,height,angle){
     const [x,,z]=pos;
     if(key==='boat')addBox(x,z,2.38,.82,angle);
@@ -1151,9 +1211,9 @@ function init(){
     else if(key==='tree')addCircle(x,z,.62);
     else if(key==='palm')addCircle(x,z,.43);
     else if((key==='rock_mid'||key==='rock_big')&&height>=.60)addCircle(x,z,Math.max(.24,height*.49));
-    else if(key==='goblin_tower')addCircle(x,z,1.05);
-    else if(key==='goblin_tent')addBox(x,z,1.02,1.02,angle);
-    else if(key==='goblin_fence')addBox(x,z,1.74,.25,angle);
+    else if(key==='goblin_tower')addCircle(x,z,1.22);
+    else if(key==='goblin_tent')addBox(x,z,1.25,1.18,angle);
+    else if(key==='goblin_fence')addBox(x,z,1.83,.30,angle);
     else if(key==='fort_open'){
       // Il modello e un grande portale: i pilastri sono solidi,
       // ma il varco centrale resta sempre attraversabile.
@@ -1174,6 +1234,8 @@ function init(){
       }
       return false;
     }
+    // Non permettere al giocatore di camminare fuori dall'isola.
+    if(!insideIsland(x,z)||nearIslandEdge(x,z,r))return true;
     // Costa ovest: il personaggio non entra nel mare.
     if(z>3&&z<30){
       const coastEdge=-23.6+.55*Math.sin(z*.42)+.18*Math.cos(z*.85);
@@ -1372,13 +1434,13 @@ function init(){
   }
   async function loadEnemyModel(type){
     if(!enemyLoader)throw Error('Caricatore non pronto');
-    const paths={slime:'./slime-verde.glb?v=0170',goblin:'./assets/goblin-animato.glb?v=0170',boss:'./assets/boss.glb?v=0170'};
+    const paths={slime:'./slime-verde.glb?v=0180',goblin:'./assets/goblin-animato.glb?v=0180',boss:'./assets/boss.glb?v=0180'};
     const gltf=await new Promise((resolve,reject)=>enemyLoader.load(paths[type],resolve,undefined,reject));
     const model=gltf.scene;
     const box=new THREE.Box3().setFromObject(model);
     const size=box.getSize(new V());
     if(!size.y||!Number.isFinite(size.y))throw Error('Dimensioni GLB non valide: '+type);
-    const scale=(type==='boss'?3.25:type==='goblin'?1.80:1.22)/size.y;
+    const scale=(type==='boss'?3.25:type==='goblin'?1.38:1.22)/size.y;
     model.scale.setScalar(scale);
     model.position.set(-box.getCenter(new V()).x*scale,-box.min.y*scale,-box.getCenter(new V()).z*scale);
     enemyAssets[type]={scene:model,animations:gltf.animations||[]};
@@ -1410,7 +1472,7 @@ function init(){
     const e=slime(x,z,seed);
     e.userData.kind='goblin';e.userData.hp=5;e.userData.maxHp=5;
     e.userData.speed=.85+rand(seed)*.2;
-    e.userData.life.position.y=2.05;
+    e.userData.life.position.y=1.62;
     e.userData.fill.material=e.userData.fill.material.clone();
     e.userData.fill.material.color.set('#f59c68');
     applyEnemyAsset(e);
@@ -2077,5 +2139,5 @@ function init(){
   camLook.copy(hero.root.position).add(new V(0,.8,0));camera.lookAt(camLook);
   updateHud();tick();initializeModels();
   refreshElement();updateAssetStatus();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0170').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js?v=0180').catch(()=>{});
 }
