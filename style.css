@@ -107,3 +107,13 @@
 @media(orientation:landscape) and (max-height:430px){.settings-card{padding:9px 18px;gap:4px}.settings-card input[type=range]{height:18px}.settings-action{min-height:29px;padding:6px}.settings-heading{font-size:17px;margin:0}.settings-card label{font-size:11px}}
 
 #boss-phase{font-size:10px;color:#f5cd91;background:#713c30;padding:3px 6px;border-radius:5px;white-space:nowrap}
+
+/* Alpha 0.20 — joystick piu grande e attivabile in qualunque punto libero a sinistra. */
+#joy{width:142px;height:142px;z-index:4;transition:opacity .12s;}
+#joy-center{width:55px;height:55px;left:50%;top:50%;transform:translate(-50%,-50%)}
+#joy.floating{opacity:.92;}
+@media(orientation:landscape) and (max-height:540px){
+  #joy{width:116px;height:116px;bottom:max(13px,env(safe-area-inset-bottom));}
+  #joy-center{width:45px;height:45px;left:50%;top:50%;}
+}
+@media(max-width:390px){#joy{width:116px;height:116px}#joy-center{width:45px;height:45px;left:50%;top:50%}}

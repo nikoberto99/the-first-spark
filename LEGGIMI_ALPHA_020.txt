@@ -1,0 +1,20 @@
+THE FIRST SPARK — ALPHA 0.20
+
+Installazione GitHub Pages: carica tutti i file e cartelle della directory principale dello ZIP nel repository, sovrascrivendo i precedenti. Aspetta la pubblicazione e riapri il sito.
+
+NOVITA
+- Joystick di movimento piu grande: tocca una zona libera nella meta sinistra dello schermo, trascina per muoverti e rilascia per fermarti. Il pulsante arco e invariato.
+- Mini-mappa aggiornata con costa reale e mare intorno all'isola.
+- Fiume e mare condividono lo stesso materiale blu; raccordo alle foci.
+- Rimosso il portone grigio dell'avamposto: ingresso di legno grezzo con bandiere Goblin, varco libero.
+- Arena Boss modulare: cinta circolare in pietra, portale, torce, senza GLB della roccaforte sovrapposto e senza pavimento esterno verde.
+- Più vegetazione e rocce leggere nelle zone meno popolate.
+- Mantenute le meccaniche, i salvataggi e i modelli animati della 0.19.
+
+CONTROLLI DA ESEGUIRE SU IPHONE
+1. Prova joystick in piu punti a sinistra, con attacco simultaneo a destra.
+2. Verifica foci del fiume, mare e colore uniforme.
+3. Verifica ingresso Boss e assenza di ostacoli invisibili.
+4. Verifica l'arena da ogni lato e la fluidita.
+
+Verifiche automatiche non equivalgono a una prova WebGL su iPhone.
