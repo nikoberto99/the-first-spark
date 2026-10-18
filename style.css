@@ -143,3 +143,21 @@
   #settings-overlay .settings-heading{font-size:16px;}
   #settings-overlay #save-status{margin:0;min-height:12px;}
 }
+
+/* Alpha 0.22 — mappa ingrandita e interattiva. */
+#mini-map-wrap{pointer-events:auto;cursor:pointer;touch-action:manipulation}
+#mini-map{pointer-events:auto}
+#map-overlay{position:fixed;inset:0;z-index:18;display:none;align-items:center;justify-content:center;
+  padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  background:#071e2bdc;backdrop-filter:blur(7px);touch-action:none}
+#map-overlay.visible{display:flex}
+.map-window{width:min(720px,94vw);height:min(95dvh,680px);min-width:0;display:flex;flex-direction:column;align-items:center;
+  border-radius:17px;border:1px solid #f4dba7b0;background:linear-gradient(145deg,#244a51,#15313e);padding:10px 14px;gap:7px;
+  box-shadow:0 16px 50px #00131fbb;overflow:hidden}
+.map-title{display:flex;width:100%;align-items:center;justify-content:space-between;color:#ffe1a7;font-size:clamp(12px,2vw,18px);font-weight:900;letter-spacing:.04em}
+.map-title button{border:1px solid #fff7;background:#385e65;color:#fff;border-radius:9px;min-width:38px;height:32px;font-size:20px}
+.map-stage{flex:1;min-height:0;min-width:0;display:flex;align-items:center;justify-content:center;max-width:100%;overflow:hidden}
+#big-map{display:block;height:100%;width:auto;max-width:100%;aspect-ratio:1/1;object-fit:contain;border:2px solid #f3deb7;border-radius:12px;touch-action:none;background:#268dbb}
+.map-tools{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#d3e7df;font-size:11px;font-weight:700}
+.map-tools>div{display:flex;gap:7px}.map-tools button{width:40px;height:31px;border-radius:8px;border:1px solid #ffffff66;background:#2e5c66;color:#fff;font-size:20px;font-weight:900}
+@media(orientation:landscape) and (max-height:460px){.map-window{height:96dvh;padding:5px 10px;gap:3px}.map-title button{height:25px}.map-tools button{height:25px;width:33px}.map-tools{font-size:9px}}

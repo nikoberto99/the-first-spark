@@ -1,0 +1,11 @@
+THE FIRST SPARK — ALPHA 0.22
+
+- Foci: acqua del fiume estesa fino al mare, senza tagli sul confine.
+- Barca spostata verso la battigia, spiaggia calpestabile fino alla costa.
+- Albero e roccia all’uscita del ponte spostati fuori dal percorso.
+- Accampamento Goblin esteso lungo la costa nord-est con terreno delimitato dalle palizzate.
+- Mini-mappa toccabile: apertura al centro, zoom +/- e trascinamento; gioco in pausa.
+- Mantenuti joystick, pulsante arco, salvataggi e progressi precedenti.
+
+Installazione: estrarre e caricare TUTTI i file su GitHub Pages.
+La build richiede una prova grafica e delle collisioni su iPhone.
