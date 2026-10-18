@@ -117,3 +117,29 @@
   #joy-center{width:45px;height:45px;left:50%;top:50%;}
 }
 @media(max-width:390px){#joy{width:116px;height:116px}#joy-center{width:45px;height:45px;left:50%;top:50%}}
+
+/* Alpha 0.21: menu centrato e stabile anche in landscape su iPhone. */
+#settings-overlay{position:fixed!important;inset:0!important;overflow:hidden!important;
+  overscroll-behavior:none;touch-action:none;justify-content:center;align-items:center;
+  padding:max(8px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right))
+          max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}
+#settings-overlay.visible{display:flex!important;}
+#settings-overlay .settings-card{position:relative!important;flex:0 1 480px;
+  width:min(480px,calc(100vw - 32px))!important;min-width:0;max-width:100%;
+  max-height:calc(100dvh - 20px);overflow-x:hidden;overflow-y:auto;
+  overscroll-behavior:contain;touch-action:pan-y;transform:none!important;
+  margin:0 auto;box-sizing:border-box;}
+#settings-overlay .settings-card>*{min-width:0;max-width:100%;}
+#settings-overlay .settings-card input[type=range]{display:block;box-sizing:border-box;
+  width:100%!important;min-width:0;max-width:100%;margin:0;flex:none;
+  touch-action:none;-webkit-appearance:auto;appearance:auto;}
+#settings-overlay .settings-heading{flex-wrap:wrap;line-height:1.15;}
+#settings-overlay .settings-action{flex:none;width:100%;}
+@media(orientation:landscape) and (max-height:450px){
+  #settings-overlay .settings-card{padding:8px 18px;gap:3px;max-height:calc(100dvh - 16px);}
+  #settings-overlay .settings-card input[type=range]{height:21px;}
+  #settings-overlay .settings-card label{margin:0;}
+  #settings-overlay .settings-action{min-height:29px;padding:5px 9px;}
+  #settings-overlay .settings-heading{font-size:16px;}
+  #settings-overlay #save-status{margin:0;min-height:12px;}
+}

@@ -1,0 +1,15 @@
+THE FIRST SPARK — ALPHA 0.21 (GitHub Pages)
+
+Novita:
+- Ponte spostato piu a sud sul fiume, sentiero curvo che conduce all’avamposto.
+- Avamposto Goblin invariato: stessa posizione in alto a destra, stessa scala, stesse strutture.
+- Superficie del mare unica, rimosso il grande strato verde/azzurro davanti alla barca.
+- Fiume e rive ritagliati ai confini dell’isola, senza strisce rettangolari nel mare.
+- Menu impostazioni fisso e adattato allo schermo orizzontale, slider contenuti nel pannello.
+- Porta del Boss ridisegnata con palizzate Meshy e doppio battente in legno aperto.
+- Tutto il resto, inclusi joystick e tasto arco, rimane invariato.
+
+Installazione: sostituire TUTTI i file nel repository GitHub Pages, non soltanto index.html.
+Attendere pubblicazione, poi chiudere e riaprire l’app/sito.
+
+Note: test automatici di sintassi e asset non sostituiscono il test grafico su iPhone.
