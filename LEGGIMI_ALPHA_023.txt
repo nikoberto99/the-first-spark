@@ -1,0 +1,41 @@
+THE FIRST SPARK — ALPHA 0.23
+================================
+Build completa per GitHub Pages, basata sulla Alpha 0.22.
+
+NOVITÀ
+- Goblin normali: altezza target 1,21 (prima 1,38), -12,3%; collisioni,
+  distanza di attacco e barre vita adeguate. Boss invariato.
+- Avamposto Goblin: perimetro più regolare lungo la costa nord-est.
+  Palizzate Meshy 3D allineate alla tangente corretta, altezza uniforme,
+  lunghezza adattata a ogni segmento. Cinque torrette e sei capanne.
+  Ingresso dal ponte libero; porta del Boss e trigger mantenuti.
+- Prestazioni iPhone: palizzate, torrette e tende 3D ripetute tramite
+  THREE.InstancedMesh. Geometrie, UV e materiali GLB originali conservati.
+  Le strutture dell'avamposto sono escluse dal rendering nell'arena Boss
+  tramite frustum culling. Non sono stati aggiunti file GLB più pesanti.
+- Arena Boss: pavimento circolare limitato al bordo delle mura, senza
+  superficie verde esterna; pietre 3D originali disposte lungo il perimetro.
+  Combattimento e Boss da 35 HP invariati.
+- Fiume e mare: transizione geometrica graduale nelle due foci, con la
+  stessa texture blu precedente e rive più morbide. Spiaggia: margine
+  di collisione più vicino alla battigia; barca e alberi invariati.
+- Mini-mappa: perimetro dell'avamposto aggiornato alla forma effettiva.
+- Rimangono: joystick mobile, mappa espandibile, menu pausa, salvataggi,
+  arco, animazioni, boss, amuleto e progressione.
+
+INSTALLAZIONE
+1. Estrarre TUTTO lo ZIP nella radice del repository GitHub Pages.
+2. Sostituire index.html, game.js, style.css, sw.js, manifest.webmanifest
+   e mantenere le cartelle assets/ e icons/.
+3. Attendere il deploy di GitHub Pages e ricaricare la pagina.
+4. Se la versione resta 0.22, chiudere e riaprire la web app o svuotare
+   i dati del sito per aggiornare il service worker (ATTENZIONE: questo
+   potrebbe cancellare i salvataggi locali, quindi prima evitarlo).
+
+VERIFICHE E LIMITI
+- Sintassi JavaScript controllata con Node.js --check.
+- ZIP e file GLB verificati staticamente.
+- NON è stato possibile testare il rendering WebGL o il gameplay su iPhone.
+  Verificare in particolare palizzate, collisioni, foci e fluidità.
+- Il codice usa Three.js 0.160.1 tramite CDN: richiede connessione per il
+  primo caricamento del motore.
